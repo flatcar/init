@@ -14,7 +14,7 @@ install:
 	install -m 755 -d \
 		$(DESTDIR)/lib/udev/rules.d \
 		$(DESTDIR)/usr/bin \
-		$(DESTDIR)/usr/lib/coreos \
+		$(DESTDIR)/usr/lib/flatcar \
 		$(DESTDIR)/usr/lib/systemd/system \
 		$(DESTDIR)/usr/lib/systemd/network \
 		$(DESTDIR)/usr/lib/systemd/system-generators \
@@ -23,7 +23,7 @@ install:
 		$(DESTDIR)/usr/share/logrotate \
 		$(DESTDIR)/usr/share/ssh
 	install -m 755 bin/* $(DESTDIR)/usr/bin
-	install -m 755 scripts/* $(DESTDIR)/usr/lib/coreos
+	install -m 755 scripts/* $(DESTDIR)/usr/lib/flatcar
 	install -m 644 systemd/network/* $(DESTDIR)/usr/lib/systemd/network
 	install -m 755 systemd/system-generators/* \
 		$(DESTDIR)/usr/lib/systemd/system-generators
