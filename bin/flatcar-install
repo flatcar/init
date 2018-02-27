@@ -1,0 +1,384 @@
+#!/bin/bash
+# Copyright (c) 2013 The CoreOS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e -o pipefail
+
+error_output() {
+    echo "Error: return code $? from $BASH_COMMAND" >&2
+}
+
+default_board() {
+    if [[ -e /usr/share/flatcar/release ]]; then
+        gawk --field-separator '=' '/FLATCAR_RELEASE_BOARD=/ { print $2 }' /usr/share/flatcar/release
+        return
+    fi
+
+    case "$(uname -m)" in
+    * )       echo "amd64-usr" ;;
+    esac
+}
+
+# Everything we do should be user-access only!
+umask 077
+
+if grep -q "^ID=flatcar$" /etc/os-release; then
+    source /etc/os-release
+    [[ -f /usr/share/flatcar/update.conf ]] && source /usr/share/flatcar/update.conf
+    [[ -f /etc/flatcar/update.conf ]] && source /etc/flatcar/update.conf
+fi
+
+# Fall back on the current stable if os-release isn't useful
+: ${VERSION_ID:=current}
+CHANNEL_ID=${GROUP:-stable}
+
+BOARD=$(default_board)
+
+OEM_ID=
+for f in /usr/share/oem/oem-release /etc/oem-release; do
+    if [[ -e $f ]]; then
+        # Pull in OEM information too, but prefixing variables with OEM_
+        eval "$(sed -e 's/^/OEM_/' $f)"
+    fi
+done
+
+USAGE="Usage: $0 [-C channel] -d /dev/device
+Options:
+    -d DEVICE   Install Flatcar Linux to the given device.
+    -V VERSION  Version to install (e.g. current) [default: ${VERSION_ID}]
+    -B BOARD    Flatcar Linux board to use [default: ${BOARD}]
+    -C CHANNEL  Release channel to use (e.g. beta) [default: ${CHANNEL_ID}]
+    -o OEM      OEM type to install (e.g. ami) [default: ${OEM_ID:-(none)}]
+    -c CLOUD    Insert a cloud-init config to be executed on boot.
+    -i IGNITION Insert an Ignition config to be executed on boot.
+    -b BASEURL  URL to the image mirror (overrides BOARD)
+    -k KEYFILE  Override default GPG key for verifying image signature
+    -f IMAGE    Install unverified local image file to disk instead of fetching
+    -n          Copy generated network units to the root partition.
+    -v          Super verbose, for debugging.
+    -h          This ;-)
+
+This tool installs Flatcar Linux on a block device. If you PXE booted
+Flatcar Linux on a machine then use this tool to make a permanent install.
+"
+
+# Image signing key:
+# $ gpg2 --list-keys --list-options show-unusable-subkeys \
+#     --keyid-format SHORT F88CFEDEFF29A5B4D9523864E25D9AED0593B34A
+# pub   rsa4096/0593B34A 2018-02-26 [SC]
+#       F88CFEDEFF29A5B4D9523864E25D9AED0593B34A
+# uid         [ultimate] Flatcar Buildbot (Official Builds) <buildbot@flatcar-linux.org>
+# sub   rsa4096/064D542D 2018-02-26 [S] [expires: 2019-02-26]
+GPG_LONG_ID="E25D9AED0593B34A"
+GPG_KEY="-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+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
+sKT7yjxBy2rzil4H+o155ks4uRm5wYE=
+=tHZ4
+-----END PGP PUBLIC KEY BLOCK-----
+"
+
+DEVICE=
+CLOUDINIT=
+IMAGE_FILE=
+KEYFILE=
+VERSION_SUMMARY='Flatcar Linux'
+
+while getopts "V:B:C:d:o:c:i:t:b:k:f:nvh" OPTION
+do
+    case $OPTION in
+        V) VERSION_ID="$OPTARG"; VERSION_SPECIFIED=1 ;;
+        B) BOARD="$OPTARG" ;;
+        C) CHANNEL_ID="$OPTARG"; CHANNEL_SPECIFIED=1 ;;
+        d) DEVICE="$OPTARG" ;;
+        o) OEM_ID="$OPTARG" ;;
+        c) CLOUDINIT="$OPTARG" ;;
+        i) IGNITION="$OPTARG" ;;
+        t) ;; # compatibility option; previously set TMPDIR
+        b) BASE_URL="${OPTARG%/}" ;;
+        k) KEYFILE="$OPTARG" ;;
+        f) IMAGE_FILE="$OPTARG" ;;
+        n) COPY_NET=1;;
+        v) set -x ;;
+        h) echo "$USAGE"; exit;;
+        *) exit 1;;
+    esac
+done
+
+# Device is required, must not be a partition, must be writable
+if [[ -z "${DEVICE}" ]]; then
+    echo "$0: No target block device provided, -d is required." >&2
+    exit 1
+fi
+
+if ! [[ $(lsblk -n -d -o TYPE "${DEVICE}") =~ ^(disk|loop|lvm)$ ]]; then
+    echo "$0: Target block device (${DEVICE}) is not a full disk." >&2
+    exit 1
+fi
+
+if [[ ! -w "${DEVICE}" ]]; then
+    echo "$0: Target block device (${DEVICE}) is not writable (are you root?)" >&2
+    exit 1
+fi
+
+if [[ -n "${CLOUDINIT}" ]]; then
+    if [[ ! -f "${CLOUDINIT}" ]]; then
+        echo "$0: Cloud config file (${CLOUDINIT}) does not exist." >&2
+        exit 1
+    fi
+
+    if type -P flatcar-cloudinit >/dev/null; then
+        if ! flatcar-cloudinit -from-file="${CLOUDINIT}" -validate; then
+            echo "$0: Cloud config file (${CLOUDINIT}) is not valid." >&2
+            exit 1
+        fi
+    else
+        echo "$0: flatcar-cloudinit not found. Could not validate config. Continuing..." >&2
+    fi
+fi
+
+if [[ -n "${IGNITION}" ]]; then
+    if [[ ! -f "${IGNITION}" ]]; then
+        echo "$0: Ignition config file (${IGNITION}) does not exist." >&2
+        exit 1
+    fi
+fi
+
+function is_modified() [[ -e "${WORKDIR}/disk_modified" ]]
+
+_disk_status=
+function wait_for_disk() {
+    [ -n "${_disk_status}" ] ||
+    read -rt 7200 _disk_status <> "${WORKDIR}/disk_modified"
+}
+
+function write_to_disk() {
+    mkfifo -m 0600 "${WORKDIR}/disk_modified"
+    trap '(exec 2>/dev/null ; echo done > "${WORKDIR}/disk_modified") &' RETURN
+
+    # We are at the point of no return, so wipe disk labels missed below.
+    # In particular, ZFS writes labels in the last half-MiB of the disk.
+    dd conv=nocreat count=1024 if=/dev/zero of="${DEVICE}" \
+        seek=$(($(blockdev --getsz "${DEVICE}") - 1024)) status=none
+
+    dd bs=1M conv=nocreat of="${DEVICE}" status=none
+
+    # inform the OS of partition table changes
+    udevadm settle
+    local try
+    for try in 0 1 2 4; do
+        sleep "$try"  # Give the device a bit more time on each attempt.
+        blockdev --rereadpt "${DEVICE}" && unset try && break ||
+        echo "Failed to reread partitions on ${DEVICE}" >&2
+    done
+    [ -z "$try" ] || exit 1
+    udevadm settle
+}
+
+function install_from_file() {
+    if ! [ -r "${IMAGE_FILE}" ]; then
+        echo "$0: Could not read image file: ${IMAGE_FILE}" >&2
+        exit 1
+    fi
+
+    echo "Writing ${IMAGE_FILE}..."
+    if [[ "${IMAGE_FILE}" =~ \.bz2$ ]]; then
+        bzip2 -cd "${IMAGE_FILE}" | write_to_disk
+    else
+        write_to_disk < "${IMAGE_FILE}"
+    fi
+
+    VERSION_SUMMARY+=" (from ${IMAGE_FILE})"
+}
+
+function install_from_url() {
+    # Ensure that required executables exist before proceeding
+    type -P wget >/dev/null || { echo 'Missing wget!' >&2 ; exit 1 ; }
+    type -P gpg >/dev/null || { echo 'Missing gpg!' >&2 ; exit 1 ; }
+
+    local IMAGE_NAME="flatcar_production_image.bin.bz2"
+    if [[ -n "${OEM_ID}" ]]; then
+        IMAGE_NAME="flatcar_production_${OEM_ID}_image.bin.bz2"
+    fi
+
+    if [[ -n "${CHANNEL_SPECIFIED-}" && -z "${VERSION_SPECIFIED-}" ]]; then
+        VERSION_ID=current
+    fi
+
+    # for compatibility with old versions that didn't support channels
+    if [[ "${VERSION_ID}" =~ ^(alpha|beta|stable)$ ]]; then
+        CHANNEL_ID="${VERSION_ID}"
+        VERSION_ID="current"
+    fi
+
+    if [[ -z "${BASE_URL}" ]]; then
+        BASE_URL="https://${CHANNEL_ID}.release.flatcar-linux.net/${BOARD}"
+    fi
+
+    # if the version is "current", resolve the actual version number
+    if [[ "${VERSION_ID}" == "current" ]]; then
+        local VERSIONTXT_URL="${BASE_URL}/${VERSION_ID}/version.txt"
+        VERSION_ID=$(wget -qO- "${VERSIONTXT_URL}" | sed -n 's/^FLATCAR_VERSION=//p')
+        if [[ -z "${VERSION_ID}" ]]; then
+            echo "$0: version.txt unavailable: ${VERSIONTXT_URL}" >&2
+            exit 1
+        fi
+        echo "Current version of Flatcar Linux ${CHANNEL_ID} is ${VERSION_ID}"
+    fi
+
+    local IMAGE_URL="${BASE_URL}/${VERSION_ID}/${IMAGE_NAME}"
+    local SIG_NAME="${IMAGE_NAME}.sig"
+    local SIG_URL="${BASE_URL}/${VERSION_ID}/${SIG_NAME}"
+
+    if ! wget --spider --quiet "${IMAGE_URL}"; then
+        echo "$0: Image URL unavailable: $IMAGE_URL" >&2
+        exit 1
+    fi
+
+    if ! wget --spider --quiet "${SIG_URL}"; then
+        echo "$0: Image signature unavailable: $SIG_URL" >&2
+        exit 1
+    fi
+
+    # Setup GnuPG for verifying the image signature
+    export GNUPGHOME="${WORKDIR}/gnupg"
+    mkdir -p "${GNUPGHOME}"
+    if [ -n "${KEYFILE}" ]; then
+        gpg --batch --quiet --import < "${KEYFILE}"
+    else
+        gpg --batch --quiet --import <<< "${GPG_KEY}"
+    fi
+
+    echo "Downloading the signature for ${IMAGE_URL}..."
+    wget --no-verbose -O "${WORKDIR}/${SIG_NAME}" "${SIG_URL}"
+
+    echo "Downloading, writing and verifying ${IMAGE_NAME}..."
+    if ! wget --no-verbose -O - "${IMAGE_URL}" \
+        | tee >(bzip2 -cd >&3) \
+        | gpg --batch --trusted-key "${GPG_LONG_ID}" \
+            --verify "${WORKDIR}/${SIG_NAME}" -
+    then
+        local EEND=( "${PIPESTATUS[@]}" )
+        [ ${EEND[0]} -ne 0 ] && echo "${EEND[0]}: Download of ${IMAGE_NAME} did not complete" >&2
+        [ ${EEND[1]} -ne 0 ] && echo "${EEND[1]}: Cannot expand ${IMAGE_NAME} to ${DEVICE}" >&2
+        [ ${EEND[2]} -ne 0 ] && echo "${EEND[2]}: GPG signature verification failed for ${IMAGE_NAME}" >&2
+        exit 1
+    fi 3> >(write_to_disk)
+
+    VERSION_SUMMARY+=" ${CHANNEL_ID} ${VERSION_ID}${OEM_ID:+ (${OEM_ID})}"
+}
+
+function write_cloudinit() if [[ -n "${CLOUDINIT}${COPY_NET}" ]]; then
+    # The ROOT partition should be #9 but make no assumptions here!
+    # Also don't mount by label directly in case other devices conflict.
+    local ROOT_DEV=$(blkid -t "LABEL=ROOT" -o device "${DEVICE}"*)
+
+    mkdir -p "${WORKDIR}/rootfs"
+    case $(blkid -t "LABEL=ROOT" -o value -s TYPE "${ROOT_DEV}") in
+      "btrfs") mount -t btrfs -o subvol=root "${ROOT_DEV}" "${WORKDIR}/rootfs" ;;
+      *)       mount "${ROOT_DEV}" "${WORKDIR}/rootfs" ;;
+    esac
+    trap 'umount "${WORKDIR}/rootfs"' RETURN
+
+    if [[ -n "${CLOUDINIT}" ]]; then
+      echo "Installing cloud-config..."
+      mkdir -p "${WORKDIR}/rootfs/var/lib/flatcar-install"
+      cp "${CLOUDINIT}" "${WORKDIR}/rootfs/var/lib/flatcar-install/user_data"
+    fi
+
+    if [[ -n "${COPY_NET}" ]]; then
+      echo "Copying network units to root partition."
+      # Copy the entire directory, do not overwrite anything that might exist there, keep permissions, and copy the resolve.conf link as a file.
+      cp --recursive --no-clobber --preserve --dereference /run/systemd/network/* "${WORKDIR}/rootfs/etc/systemd/network"
+    fi
+fi
+
+function write_ignition() if [[ -n "${IGNITION}" ]]; then
+    # The OEM partition should be #6 but make no assumptions here!
+    # Also don't mount by label directly in case other devices conflict.
+    local OEM_DEV=$(blkid -t "LABEL=OEM" -o device "${DEVICE}"*)
+
+    mkdir -p "${WORKDIR}/oemfs"
+    mount "${OEM_DEV}" "${WORKDIR}/oemfs"
+    trap 'umount "${WORKDIR}/oemfs"' RETURN
+
+    echo "Installing Ignition config ${IGNITION}..."
+    cp "${IGNITION}" "${WORKDIR}/oemfs/flatcar-install.json"
+    echo 'set linux_append="$linux_append flatcar.config.url=oem:///flatcar-install.json"' >> "${WORKDIR}/oemfs/grub.cfg"
+fi
+
+WORKDIR=$(mktemp --tmpdir -d flatcar-install.XXXXXXXXXX)
+trap 'error_output ; is_modified && wipefs --all --backup "${DEVICE}" ; rm -rf "${WORKDIR}"' EXIT
+
+if [ -n "${IMAGE_FILE}" ]; then
+    install_from_file
+else
+    install_from_url
+fi
+wait_for_disk
+write_cloudinit
+write_ignition
+
+rm -rf "${WORKDIR}"
+trap - EXIT
+
+echo "Success! ${VERSION_SUMMARY} is installed on ${DEVICE}"
