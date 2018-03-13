@@ -9,7 +9,7 @@ depends() {
 install() {
     inst_multiple \
         ignition \
-        coreos-metadata \
+        flatcar-metadata \
         useradd \
         usermod \
         groupadd \
@@ -42,11 +42,11 @@ install() {
     inst_simple "$moddir/sysroot-boot.service" \
         "$systemdsystemunitdir/sysroot-boot.service"
 
-    inst_simple "$moddir/coreos-digitalocean-network.service" \
-        "$systemdsystemunitdir/coreos-digitalocean-network.service"
+    inst_simple "$moddir/flatcar-digitalocean-network.service" \
+        "$systemdsystemunitdir/flatcar-digitalocean-network.service"
 
-    inst_simple "$moddir/coreos-static-network.service" \
-        "$systemdsystemunitdir/coreos-static-network.service"
+    inst_simple "$moddir/flatcar-static-network.service" \
+        "$systemdsystemunitdir/flatcar-static-network.service"
 
     inst_rules \
         60-cdrom_id.rules

@@ -1,5 +1,5 @@
 [Unit]
-Description=CoreOS Static Network Agent
+Description=Flatcar Static Network Agent
 DefaultDependencies=false
 Before=initrd.target
 After=systemd-networkd.service initrd-root-fs.target
@@ -10,4 +10,4 @@ Before=ignition-files.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/coreos-metadata --cmdline --network-units=/sysroot/etc/systemd/network/ --hostname=/sysroot/etc/hostname
+ExecStart=/usr/bin/flatcar-metadata --cmdline --network-units=/sysroot/etc/systemd/network/ --hostname=/sysroot/etc/hostname

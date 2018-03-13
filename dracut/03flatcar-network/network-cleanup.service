@@ -4,7 +4,7 @@ DefaultDependencies=false
 RefuseManualStart=true
 RefuseManualStop=true
 # Oracle OCI accesses root over iSCSI, so we can't tear down the network
-ConditionKernelCommandLine=!coreos.oem.id=oracle-oci
+ConditionKernelCommandLine=!flatcar.oem.id=oracle-oci
 
 PartOf=systemd-networkd.service
 Before=systemd-networkd.service

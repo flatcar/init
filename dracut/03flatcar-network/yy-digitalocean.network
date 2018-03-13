@@ -1,5 +1,5 @@
 [Match]
-KernelCommandLine=coreos.oem.id=digitalocean
+KernelCommandLine=flatcar.oem.id=digitalocean
 Name=eth0
 
 [Network]

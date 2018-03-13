@@ -35,20 +35,20 @@ add_requires() {
 # This can't be done with ConditionKernelCommandLine because that always
 # starts the unit's dependencies. We want to start networkd only on first
 # boot.
-if $(cmdline_bool coreos.first_boot 0); then
+if $(cmdline_bool flatcar.first_boot 0); then
     add_requires ignition-disks.service
     add_requires ignition-files.service
     # Only try to mount the ESP if GRUB detected a first_boot file
-    if [[ $(cmdline_arg coreos.first_boot) = "detected" ]]; then
+    if [[ $(cmdline_arg flatcar.first_boot) = "detected" ]]; then
         add_requires ignition-quench.service
     fi
-    if [[ $(cmdline_arg coreos.oem.id) == "packet" ]]; then
-        add_requires coreos-static-network.service
+    if [[ $(cmdline_arg flatcar.oem.id) == "packet" ]]; then
+        add_requires flatcar-static-network.service
     fi
 
     # On EC2, shut down systemd-networkd if ignition fails so that the instance
     # fails EC2 instance checks.
-    if [[ $(cmdline_arg coreos.oem.id) == "ec2" ]]; then
+    if [[ $(cmdline_arg flatcar.oem.id) == "ec2" ]]; then
         mkdir -p ${UNIT_DIR}/systemd-networkd.service.d
         cat > ${UNIT_DIR}/systemd-networkd.service.d/10-conflict-emergency.conf <<EOF
 [Unit]
@@ -87,14 +87,14 @@ Type=oneshot
 ExecStart=/usr/sbin/ignition-setup ${nopxe:+normal} ${pxe:+pxe}
 EOF
 
-RANDOMIZE_DISK_GUID=$(cmdline_arg coreos.randomize_disk_guid)
+RANDOMIZE_DISK_GUID=$(cmdline_arg flatcar.randomize_disk_guid)
 if [ -n "$RANDOMIZE_DISK_GUID" ]; then
     escaped_guid=$(systemd-escape --path "/dev/disk/by-diskuuid/$RANDOMIZE_DISK_GUID")
     add_requires "disk-uuid@${escaped_guid}.service"
 fi
 
-if [[ $(cmdline_arg coreos.oem.id) == "digitalocean" ]]; then
-    add_requires coreos-digitalocean-network.service
+if [[ $(cmdline_arg flatcar.oem.id) == "digitalocean" ]]; then
+    add_requires flatcar-digitalocean-network.service
 fi
 
 oem_id=pxe
@@ -102,4 +102,4 @@ if [[ $(systemd-detect-virt || true) =~ ^(kvm|qemu)$ ]]; then
     oem_id=qemu
 fi
 
-echo "OEM_ID=$(cmdline_arg coreos.oem.id ${oem_id})" > /run/ignition.env
+echo "OEM_ID=$(cmdline_arg flatcar.oem.id ${oem_id})" > /run/ignition.env

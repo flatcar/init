@@ -26,6 +26,6 @@ add_requires() {
 
 # This can't be done with ConditionKernelCommandLine because that always
 # starts the unit's dependencies.
-if [[ $(cmdline_arg coreos.oem.id) == "oracle-oci" ]]; then
+if [[ $(cmdline_arg flatcar.oem.id) == "oracle-oci" ]]; then
     add_requires oracle-oci-root.service
 fi

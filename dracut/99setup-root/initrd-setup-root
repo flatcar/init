@@ -21,7 +21,7 @@ done
 
 # This creates the modifiable users/groups in /sysroot/etc,
 # initializing the shadow database in the process.
-/usr/sbin/coreos-tmpfiles /sysroot
+/usr/sbin/flatcar-tmpfiles /sysroot
 
 # Remove our phony id. systemd will initialize this during boot.
 if grep -qs "${COREOS_BLANK_MACHINE_ID}" "${MACHINE_ID_FILE}"; then

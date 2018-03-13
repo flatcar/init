@@ -7,7 +7,7 @@ depends() {
 }
 
 install() {
-    dracut_install grep ldconfig mountpoint systemd-tmpfiles coreos-tmpfiles
+    dracut_install grep ldconfig mountpoint systemd-tmpfiles flatcar-tmpfiles
 
     inst_script "${moddir}/initrd-setup-root" \
 	        "/sbin/initrd-setup-root"
