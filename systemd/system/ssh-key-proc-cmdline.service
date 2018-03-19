@@ -3,7 +3,7 @@ Description=Install an ssh key from /proc/cmdline
 
 [Service]
 Type=oneshot
-ExecStart=/usr/lib/coreos/ssh-key-proc-cmdline
+ExecStart=/usr/lib/flatcar/ssh-key-proc-cmdline
 
 [Install]
 WantedBy=multi-user.target
