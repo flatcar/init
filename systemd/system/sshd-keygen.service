@@ -5,4 +5,4 @@ Before=sshd.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/lib/coreos/sshd_keygen
+ExecStart=/usr/lib/flatcar/sshd_keygen
