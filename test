@@ -37,7 +37,7 @@ go vet $PKG_VET
 
 if [ "${ACTION:-TEST}" != "COMPILE" ]; then
 	echo "Running tests..."
-	go test -timeout 9999s -cover $@ ${PKG} --race --test.v --parallel 5 --coreos-install=${GOBIN}/coreos-install
+	go test -timeout 9999s -cover $@ ${PKG} --race --test.v --parallel 5 --coreos-install=${GOBIN}/flatcar-install
 else
 	echo "Compiling tests..."
 	for p in ${PKG}; do
