@@ -1,5 +1,5 @@
 [Match]
-KernelCommandLine=coreos.oem.id=oracle-oci
+KernelCommandLine=flatcar.oem.id=oracle-oci
 
 [Network]
 DHCP=yes
