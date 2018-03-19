@@ -56,13 +56,13 @@ EOF
 autologin() {
     param="$1"
     arg=$(echo "${param}" | awk -F'=' '{print $2}')
-    # if coreos.autologin=ttyS*, override serial-getty@ttyS*.service.d
+    # if flatcar.autologin=ttyS*, override serial-getty@ttyS*.service.d
     if [[ "$arg" == *S* ]]; then
         overlay_unit "serial-getty@${arg}.service"
-    # if coreos.autologin=tty*, override getty@tty*.service.d
+    # if flatcar.autologin=tty*, override getty@tty*.service.d
     elif [ -n "${arg}" ]; then
         overlay_unit "getty@${arg}.service"
-    # if just coreos.autologin, override serial-getty@.service.d and getty@.service.d
+    # if just flatcar.autologin, override serial-getty@.service.d and getty@.service.d
     elif [ -z "${arg}" ]; then
         overlay_unit "getty@.service"
         overlay_unit "serial-getty@.service"
@@ -75,7 +75,7 @@ read -r CMDLINE </proc/cmdline;
 
 for i in $CMDLINE; do
     case "$i" in
-         coreos.autologin*) autologin "$i" ;;
+         flatcar.autologin*) autologin "$i" ;;
     esac
 done
 
