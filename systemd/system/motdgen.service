@@ -1,7 +1,7 @@
 [Unit]
-Description=Generate /run/coreos/motd
+Description=Generate /run/flatcar/motd
 Before=systemd-user-sessions.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/lib/coreos/motdgen
+ExecStart=/usr/lib/flatcar/motdgen
