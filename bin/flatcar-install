@@ -234,13 +234,13 @@ if [[ -n "${CLOUDINIT}" ]]; then
         exit 1
     fi
 
-    if type -P flatcar-cloudinit >/dev/null; then
-        if ! flatcar-cloudinit -from-file="${CLOUDINIT}" -validate; then
+    if type -P coreos-cloudinit >/dev/null; then
+        if ! coreos-cloudinit -from-file="${CLOUDINIT}" -validate; then
             echo "$0: Cloud config file (${CLOUDINIT}) is not valid." >&2
             exit 1
         fi
     else
-        echo "$0: flatcar-cloudinit not found. Could not validate config. Continuing..." >&2
+        echo "$0: coreos-cloudinit not found. Could not validate config. Continuing..." >&2
     fi
 fi
 
