@@ -10,4 +10,4 @@ Before=ignition-files.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/flatcar-metadata --cmdline --network-units=/sysroot/etc/systemd/network/ --hostname=/sysroot/etc/hostname
+ExecStart=/usr/bin/coreos-metadata --cmdline --network-units=/sysroot/etc/systemd/network/ --hostname=/sysroot/etc/hostname
