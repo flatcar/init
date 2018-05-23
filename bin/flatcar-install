@@ -43,21 +43,22 @@ for f in /usr/share/oem/oem-release /etc/oem-release; do
     fi
 done
 
-USAGE="Usage: $0 [-C channel] -d /dev/device
+USAGE="Usage: $0 -d <device> [options]
 Options:
     -d DEVICE   Install Flatcar Linux to the given device.
-    -V VERSION  Version to install (e.g. current) [default: ${VERSION_ID}]
-    -B BOARD    Flatcar Linux board to use [default: ${BOARD}]
-    -C CHANNEL  Release channel to use (e.g. beta) [default: ${CHANNEL_ID}]
-    -o OEM      OEM type to install (e.g. ami) [default: ${OEM_ID:-(none)}]
+    -V VERSION  Version to install (e.g. current) [default: ${VERSION_ID}].
+    -B BOARD    Flatcar Linux board to use [default: ${BOARD}].
+    -C CHANNEL  Release channel to use (e.g. beta) [default: ${CHANNEL_ID}].
+    -o OEM      OEM type to install (e.g. ami) [default: ${OEM_ID:-(none)}].
     -c CLOUD    Insert a cloud-init config to be executed on boot.
     -i IGNITION Insert an Ignition config to be executed on boot.
-    -b BASEURL  URL to the image mirror (overrides BOARD)
-    -k KEYFILE  Override default GPG key for verifying image signature
-    -f IMAGE    Install unverified local image file to disk instead of fetching
+    -b BASEURL  URL to the image mirror (overrides BOARD).
+    -k KEYFILE  Override default GPG key for verifying image signature.
+    -f IMAGE    Install unverified local image file to disk instead of fetching.
     -n          Copy generated network units to the root partition.
+    -y          Dry-run.  Run some checks and print option settings.
     -v          Super verbose, for debugging.
-    -h          This ;-)
+    -h          This ;-).
 
 This tool installs Flatcar Linux on a block device. If you PXE booted
 Flatcar Linux on a machine then use this tool to make a permanent install.
@@ -191,7 +192,7 @@ IMAGE_FILE=
 KEYFILE=
 VERSION_SUMMARY='Flatcar Linux'
 
-while getopts "V:B:C:d:o:c:i:t:b:k:f:nvh" OPTION
+while getopts "V:B:C:d:o:c:i:t:b:k:f:nyvh" OPTION
 do
     case $OPTION in
         V) VERSION_ID="$OPTARG"; VERSION_SPECIFIED=1 ;;
@@ -206,15 +207,31 @@ do
         k) KEYFILE="$OPTARG" ;;
         f) IMAGE_FILE="$OPTARG" ;;
         n) COPY_NET=1;;
+        y) DRY_RUN=1 ;;
         v) set -x ;;
         h) echo "$USAGE"; exit;;
         *) exit 1;;
     esac
 done
 
+function print_settings() {
+    echo "\
+Settings:
+    VERSION:  ${VERSION_ID}
+    BOARD:    ${BOARD}
+    CHANNEL:  ${CHANNEL_ID}
+    OEM:      ${OEM_ID:-(none)}
+    CLOUD:    ${CLOUDINIT:-(none)}
+    IGNITION: ${IGNITION:-(none)}
+    BASEURL:  ${BASE_URL:-(none)}
+    KEYFILE:  ${KEYFILE:-(none)}
+    IMAGE:    ${IMAGE_FILE:-(none)}"
+}
+
 # Device is required, must not be a partition, must be writable
 if [[ -z "${DEVICE}" ]]; then
     echo "$0: No target block device provided, -d is required." >&2
+    echo "$USAGE" >&2
     exit 1
 fi
 
@@ -249,6 +266,11 @@ if [[ -n "${IGNITION}" ]]; then
         echo "$0: Ignition config file (${IGNITION}) does not exist." >&2
         exit 1
     fi
+fi
+
+if [[ -n "${DRY_RUN}" ]]; then
+    print_settings
+    exit 0
 fi
 
 function is_modified() [[ -e "${WORKDIR}/disk_modified" ]]
@@ -410,8 +432,7 @@ function write_ignition() if [[ -n "${IGNITION}" ]]; then
     trap 'umount "${WORKDIR}/oemfs"' RETURN
 
     echo "Installing Ignition config ${IGNITION}..."
-    cp "${IGNITION}" "${WORKDIR}/oemfs/flatcar-install.json"
-    echo 'set linux_append="$linux_append flatcar.config.url=oem:///flatcar-install.json"' >> "${WORKDIR}/oemfs/grub.cfg"
+    cp "${IGNITION}" "${WORKDIR}/oemfs/config.ign"
 fi
 
 WORKDIR=$(mktemp --tmpdir -d flatcar-install.XXXXXXXXXX)
