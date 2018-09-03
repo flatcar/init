@@ -7,4 +7,4 @@ Wants=systemd-networkd.service initrd-root-fs.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/flatcar-metadata --cmdline --network-units=/run/systemd/network/ --hostname=/sysroot/etc/hostname
+ExecStart=/usr/bin/coreos-metadata --cmdline --network-units=/run/systemd/network/ --hostname=/sysroot/etc/hostname

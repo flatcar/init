@@ -9,7 +9,7 @@ depends() {
 install() {
     inst_multiple \
         ignition \
-        flatcar-metadata \
+        coreos-metadata \
         useradd \
         usermod \
         groupadd \
