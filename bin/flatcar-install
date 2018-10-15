@@ -382,7 +382,7 @@ function install_from_url() {
     fi
 
     # for compatibility with old versions that didn't support channels
-    if [[ "${VERSION_ID}" =~ ^(alpha|beta|stable)$ ]]; then
+    if [[ "${VERSION_ID}" =~ ^(alpha|beta|stable|edge)$ ]]; then
         CHANNEL_ID="${VERSION_ID}"
         VERSION_ID="current"
     fi
