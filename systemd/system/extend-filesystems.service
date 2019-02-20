@@ -5,5 +5,5 @@ ConditionVirtualization=!container
 [Service]
 Type=oneshot
 RemainAfterExit=no
-ExecStart=/usr/lib/coreos/extend-filesystems
+ExecStart=/usr/lib/flatcar/extend-filesystems
 StandardOutput=journal+console
