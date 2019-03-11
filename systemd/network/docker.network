@@ -1,0 +1,7 @@
+# Exclude docker devices from DHCP by default
+
+[Match]
+Name=docker*
+
+[Link]
+Unmanaged=yes
