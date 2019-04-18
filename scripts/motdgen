@@ -5,14 +5,15 @@
 # found in the LICENSE file.
 
 # We want to grab the GROUP variable
-[ -e /usr/share/coreos/update.conf ] && source /usr/share/coreos/update.conf
-[ -e /etc/coreos/update.conf ] && source /etc/coreos/update.conf
+[ -e /usr/share/flatcar/update.conf ] && source /usr/share/flatcar/update.conf
+[ -e /etc/flatcar/update.conf ] && source /etc/flatcar/update.conf
 
 source /usr/lib/os-release
 
-mkdir -p /run/coreos
-echo -e "\e[${ANSI_COLOR}m${NAME}\e[39m ${GROUP} (${VERSION})" > /run/coreos/motd
+mkdir -p /run/flatcar
+ln -sf flatcar /run/coreos
+echo -e "\e[${ANSI_COLOR}m${NAME}\e[39m ${GROUP} (${VERSION})" > /run/flatcar/motd
 
 if [[ -d "/etc/motd.d" ]]; then
-	cat /etc/motd.d/*.conf 2>/dev/null >> /run/coreos/motd || true
+	cat /etc/motd.d/*.conf 2>/dev/null >> /run/flatcar/motd || true
 fi
