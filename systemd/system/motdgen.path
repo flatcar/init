@@ -2,4 +2,4 @@
 Description=Watch for update engine configuration changes
 
 [Path]
-PathChanged=/etc/coreos/update.conf
+PathChanged=/etc/flatcar/update.conf

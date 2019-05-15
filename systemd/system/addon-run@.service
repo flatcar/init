@@ -5,4 +5,4 @@ ConditionFileIsExecutable=|/%I/run.sh
 
 [Service]
 Type=oneshot
-ExecStart=/usr/lib/coreos/addon_run /%I
+ExecStart=/usr/lib/flatcar/addon_run /%I
