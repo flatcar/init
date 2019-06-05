@@ -1,0 +1,7 @@
+# Exclude IPSEC vti devices from DHCP by default
+
+[Match]
+Name=vti*
+
+[Link]
+Unmanaged=yes
