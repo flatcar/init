@@ -93,13 +93,13 @@ func FetchLocalImage(t *testing.T) string {
 		t.Fatalf("failed creating temp dir: %v", err)
 	}
 
-	err = DownloadFile(tmpDir, "coreos_production_image.bin.bz2")
+	err = DownloadFile(tmpDir, "flatcar_production_image.bin.bz2")
 	if err != nil {
 		os.RemoveAll(tmpDir)
 		t.Fatalf("failed downloading image: %v", err)
 	}
 
-	err = DownloadFile(tmpDir, "coreos_production_image.bin.bz2.sig")
+	err = DownloadFile(tmpDir, "flatcar_production_image.bin.bz2.sig")
 	if err != nil {
 		os.RemoveAll(tmpDir)
 		t.Fatalf("failed downloading signature: %v", err)
@@ -124,7 +124,7 @@ func GetDefaultChannelBoardVersion() (string, string, string, error) {
 	}
 
 	os, err := TryRegexpSearch("id", "ID=['\"]?([A-Za-z0-9 \\._\\-]*)['\"]?", data)
-	if err != nil || os != "coreos" {
+	if err != nil || os != "flatcar" {
 		return "stable", "amd64-usr", "current", nil
 	}
 
@@ -133,14 +133,14 @@ func GetDefaultChannelBoardVersion() (string, string, string, error) {
 		return "", "", "", err
 	}
 
-	board, err := TryRegexpSearch("board", "COREOS_BOARD=['\"]?([A-Za-z0-9 \\._\\-]*)['\"]?", data)
+	board, err := TryRegexpSearch("board", "FLATCAR_BOARD=['\"]?([A-Za-z0-9 \\._\\-]*)['\"]?", data)
 	if err != nil {
 		return "", "", "", err
 	}
 
-	data, err = ioutil.ReadFile("/etc/coreos/update.conf")
+	data, err = ioutil.ReadFile("/etc/flatcar/update.conf")
 	if err != nil {
-		return "", "", "", fmt.Errorf("reading /etc/coreos/update.conf: %v", err)
+		return "", "", "", fmt.Errorf("reading /etc/flatcar/update.conf: %v", err)
 	}
 
 	channel, err := TryRegexpSearch("channel", "GROUP=['\"]?([A-Za-z0-9 \\._\\-]*)['\"]?", data)
@@ -197,15 +197,15 @@ func CreateNetworkUnit(t *testing.T) string {
 
 	// no existing network files exist, write a valid .network file
 	// which performs a no-op
-	file, err := os.Create("/run/systemd/network/coreos-install-test.network")
+	file, err := os.Create("/run/systemd/network/flatcar-install-test.network")
 	if err != nil {
 		t.Fatalf("creating network unit: %v", err)
 	}
 	defer file.Close()
 
-	_, err = file.WriteString(`# Created by coreos-install tests
+	_, err = file.WriteString(`# Created by flatcar-install tests
 [Match]
-Architecture=coreos-install`)
+Architecture=flatcar-install`)
 	if err != nil {
 		t.Fatalf("writing data to network unit: %v", err)
 	}
@@ -225,11 +225,11 @@ func (server *HTTPServer) Version(w http.ResponseWriter, r *http.Request) {
 }
 
 func (server *HTTPServer) Image(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, filepath.Join(server.FileDir, "coreos_production_image.bin.bz2"))
+	http.ServeFile(w, r, filepath.Join(server.FileDir, "flatcar_production_image.bin.bz2"))
 }
 
 func (server *HTTPServer) Signature(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, filepath.Join(server.FileDir, "coreos_production_image.bin.bz2.sig"))
+	http.ServeFile(w, r, filepath.Join(server.FileDir, "flatcar_production_image.bin.bz2.sig"))
 }
 
 func (server *HTTPServer) Start(t *testing.T) string {
@@ -239,10 +239,10 @@ func (server *HTTPServer) Start(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("Couldn't read version.txt")
 	}
-	version := RegexpSearch(t, "version", "COREOS_VERSION=(.*)", data)
+	version := RegexpSearch(t, "version", "FLATCAR_VERSION=(.*)", data)
 
-	http.HandleFunc(fmt.Sprintf("/%s/coreos_production_image.bin.bz2", version), server.Image)
-	http.HandleFunc(fmt.Sprintf("/%s/coreos_production_image.bin.bz2.sig", version), server.Signature)
+	http.HandleFunc(fmt.Sprintf("/%s/flatcar_production_image.bin.bz2", version), server.Image)
+	http.HandleFunc(fmt.Sprintf("/%s/flatcar_production_image.bin.bz2.sig", version), server.Signature)
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
