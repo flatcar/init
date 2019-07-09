@@ -1,0 +1,7 @@
+# Exclude kubernetes CNI devices from DHCP by default
+
+[Match]
+Name=cni*
+
+[Link]
+Unmanaged=yes
