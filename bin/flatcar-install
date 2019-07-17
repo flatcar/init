@@ -1,0 +1,500 @@
+#!/bin/bash
+# Copyright (c) 2013 The CoreOS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e -o pipefail
+
+error_output() {
+    echo "Error: return code $? from $BASH_COMMAND" >&2
+}
+
+default_board() {
+    if [[ -e /usr/share/flatcar/release ]]; then
+        gawk --field-separator '=' '/FLATCAR_RELEASE_BOARD=/ { print $2 }' /usr/share/flatcar/release
+        return
+    fi
+
+    case "$(uname -m)" in
+    * )       echo "amd64-usr" ;;
+    esac
+}
+
+# Everything we do should be user-access only!
+umask 077
+
+if grep -q "^ID=flatcar$" /etc/os-release; then
+    source /etc/os-release
+    [[ -f /usr/share/flatcar/update.conf ]] && source /usr/share/flatcar/update.conf
+    [[ -f /etc/flatcar/update.conf ]] && source /etc/flatcar/update.conf
+fi
+
+# Fall back on the current stable if os-release isn't useful
+: ${VERSION_ID:=current}
+CHANNEL_ID=${GROUP:-stable}
+
+BOARD=$(default_board)
+
+OEM_ID=
+for f in /usr/share/oem/oem-release /etc/oem-release; do
+    if [[ -e $f ]]; then
+        # Pull in OEM information too, but prefixing variables with OEM_
+        eval "$(sed -e 's/^/OEM_/' $f)"
+    fi
+done
+
+USAGE="Usage: $0 -d <device> [options]
+Options:
+    -d DEVICE   Install Flatcar Linux to the given device.
+    -V VERSION  Version to install (e.g. current) [default: ${VERSION_ID}].
+    -B BOARD    Flatcar Linux board to use [default: ${BOARD}].
+    -C CHANNEL  Release channel to use (e.g. beta) [default: ${CHANNEL_ID}].
+    -o OEM      OEM type to install (e.g. ami) [default: ${OEM_ID:-(none)}].
+    -c CLOUD    Insert a cloud-init config to be executed on boot.
+    -i IGNITION Insert an Ignition config to be executed on boot.
+    -b BASEURL  URL to the image mirror (overrides BOARD).
+    -k KEYFILE  Override default GPG key for verifying image signature.
+    -f IMAGE    Install unverified local image file to disk instead of fetching.
+    -n          Copy generated network units to the root partition.
+    -y          Dry-run.  Run some checks and print option settings.
+    -v          Super verbose, for debugging.
+    -h          This ;-).
+
+This tool installs Flatcar Linux on a block device. If you PXE booted
+Flatcar Linux on a machine then use this tool to make a permanent install.
+"
+
+# Image signing key:
+# $ gpg2 --list-keys --list-options show-unusable-subkeys \
+#     --keyid-format SHORT F88CFEDEFF29A5B4D9523864E25D9AED0593B34A
+# pub   rsa4096/0593B34A 2018-02-26 [SC]
+#       F88CFEDEFF29A5B4D9523864E25D9AED0593B34A
+# uid         [ultimate] Flatcar Buildbot (Official Builds) <buildbot@flatcar-linux.org>
+# sub   rsa4096/064D542D 2018-02-26 [S] [revoked: 2018-03-14]
+# sub   rsa4096/D0FC498C 2018-03-14 [S] [revoked: 2018-09-26]
+# sub   rsa4096/896E394F 2018-09-26 [S] [expires: 2019-09-26]
+GPG_LONG_ID="E25D9AED0593B34A"
+GPG_KEY="-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+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
+=hIuN
+-----END PGP PUBLIC KEY BLOCK-----
+"
+
+DEVICE=
+CLOUDINIT=
+IMAGE_FILE=
+KEYFILE=
+VERSION_SUMMARY='Flatcar Linux'
+
+while getopts "V:B:C:d:o:c:i:t:b:k:f:nyvh" OPTION
+do
+    case $OPTION in
+        V) VERSION_ID="$OPTARG"; VERSION_SPECIFIED=1 ;;
+        B) BOARD="$OPTARG" ;;
+        C) CHANNEL_ID="$OPTARG"; CHANNEL_SPECIFIED=1 ;;
+        d) DEVICE="$OPTARG" ;;
+        o) OEM_ID="$OPTARG" ;;
+        c) CLOUDINIT="$OPTARG" ;;
+        i) IGNITION="$OPTARG" ;;
+        t) ;; # compatibility option; previously set TMPDIR
+        b) BASE_URL="${OPTARG%/}" ;;
+        k) KEYFILE="$OPTARG" ;;
+        f) IMAGE_FILE="$OPTARG" ;;
+        n) COPY_NET=1;;
+        y) DRY_RUN=1 ;;
+        v) set -x ;;
+        h) echo "$USAGE"; exit;;
+        *) exit 1;;
+    esac
+done
+
+function print_settings() {
+    echo "\
+Settings:
+    VERSION:  ${VERSION_ID}
+    BOARD:    ${BOARD}
+    CHANNEL:  ${CHANNEL_ID}
+    OEM:      ${OEM_ID:-(none)}
+    CLOUD:    ${CLOUDINIT:-(none)}
+    IGNITION: ${IGNITION:-(none)}
+    BASEURL:  ${BASE_URL:-(none)}
+    KEYFILE:  ${KEYFILE:-(none)}
+    IMAGE:    ${IMAGE_FILE:-(none)}"
+}
+
+# Device is required, must not be a partition, must be writable
+if [[ -z "${DEVICE}" ]]; then
+    echo "$0: No target block device provided, -d is required." >&2
+    echo "$USAGE" >&2
+    exit 1
+fi
+
+if ! [[ $(lsblk -n -d -o TYPE "${DEVICE}") =~ ^(disk|loop|lvm)$ ]]; then
+    echo "$0: Target block device (${DEVICE}) is not a full disk." >&2
+    exit 1
+fi
+
+if [[ ! -w "${DEVICE}" ]]; then
+    echo "$0: Target block device (${DEVICE}) is not writable (are you root?)" >&2
+    exit 1
+fi
+
+if [[ -n "${CLOUDINIT}" ]]; then
+    if [[ ! -f "${CLOUDINIT}" ]]; then
+        echo "$0: Cloud config file (${CLOUDINIT}) does not exist." >&2
+        exit 1
+    fi
+
+    if type -P coreos-cloudinit >/dev/null; then
+        if ! coreos-cloudinit -from-file="${CLOUDINIT}" -validate; then
+            echo "$0: Cloud config file (${CLOUDINIT}) is not valid." >&2
+            exit 1
+        fi
+    else
+        echo "$0: coreos-cloudinit not found. Could not validate config. Continuing..." >&2
+    fi
+fi
+
+if [[ -n "${IGNITION}" ]]; then
+    if [[ ! -f "${IGNITION}" ]]; then
+        echo "$0: Ignition config file (${IGNITION}) does not exist." >&2
+        exit 1
+    fi
+fi
+
+if [[ -n "${DRY_RUN}" ]]; then
+    print_settings
+    exit 0
+fi
+
+function is_modified() [[ -e "${WORKDIR}/disk_modified" ]]
+
+_disk_status=
+function wait_for_disk() {
+    [ -n "${_disk_status}" ] ||
+    read -rt 7200 _disk_status <> "${WORKDIR}/disk_modified"
+}
+
+function write_to_disk() {
+    mkfifo -m 0600 "${WORKDIR}/disk_modified"
+    trap '(exec 2>/dev/null ; echo done > "${WORKDIR}/disk_modified") &' RETURN
+
+    # We are at the point of no return, so wipe disk labels missed below.
+    # In particular, ZFS writes labels in the last half-MiB of the disk.
+    dd conv=nocreat count=1024 if=/dev/zero of="${DEVICE}" \
+        seek=$(($(blockdev --getsz "${DEVICE}") - 1024)) status=none
+
+    dd bs=1M conv=nocreat of="${DEVICE}" status=none
+
+    # inform the OS of partition table changes
+    udevadm settle
+    local try
+    for try in 0 1 2 4; do
+        sleep "$try"  # Give the device a bit more time on each attempt.
+        blockdev --rereadpt "${DEVICE}" && unset try && break ||
+        echo "Failed to reread partitions on ${DEVICE}" >&2
+    done
+    [ -z "$try" ] || exit 1
+    udevadm settle
+}
+
+function install_from_file() {
+    if ! [ -r "${IMAGE_FILE}" ]; then
+        echo "$0: Could not read image file: ${IMAGE_FILE}" >&2
+        exit 1
+    fi
+
+    echo "Writing ${IMAGE_FILE}..."
+    if [[ "${IMAGE_FILE}" =~ \.bz2$ ]]; then
+        bzip2 -cd "${IMAGE_FILE}" | write_to_disk
+    else
+        write_to_disk < "${IMAGE_FILE}"
+    fi
+
+    VERSION_SUMMARY+=" (from ${IMAGE_FILE})"
+}
+
+function install_from_url() {
+    # Ensure that required executables exist before proceeding
+    type -P wget >/dev/null || { echo 'Missing wget!' >&2 ; exit 1 ; }
+    type -P gpg >/dev/null || { echo 'Missing gpg!' >&2 ; exit 1 ; }
+
+    local IMAGE_NAME="flatcar_production_image.bin.bz2"
+    if [[ -n "${OEM_ID}" ]]; then
+        IMAGE_NAME="flatcar_production_${OEM_ID}_image.bin.bz2"
+    fi
+
+    if [[ -n "${CHANNEL_SPECIFIED-}" && -z "${VERSION_SPECIFIED-}" ]]; then
+        VERSION_ID=current
+    fi
+
+    # for compatibility with old versions that didn't support channels
+    if [[ "${VERSION_ID}" =~ ^(alpha|beta|stable|edge)$ ]]; then
+        CHANNEL_ID="${VERSION_ID}"
+        VERSION_ID="current"
+    fi
+
+    if [[ -z "${BASE_URL}" ]]; then
+        BASE_URL="https://${CHANNEL_ID}.release.flatcar-linux.net/${BOARD}"
+    fi
+
+    # if the version is "current", resolve the actual version number
+    if [[ "${VERSION_ID}" == "current" ]]; then
+        local VERSIONTXT_URL="${BASE_URL}/${VERSION_ID}/version.txt"
+        VERSION_ID=$(wget -qO- "${VERSIONTXT_URL}" | sed -n 's/^FLATCAR_VERSION=//p')
+        if [[ -z "${VERSION_ID}" ]]; then
+            echo "$0: version.txt unavailable: ${VERSIONTXT_URL}" >&2
+            exit 1
+        fi
+        echo "Current version of Flatcar Linux ${CHANNEL_ID} is ${VERSION_ID}"
+    fi
+
+    local IMAGE_URL="${BASE_URL}/${VERSION_ID}/${IMAGE_NAME}"
+    local SIG_NAME="${IMAGE_NAME}.sig"
+    local SIG_URL="${BASE_URL}/${VERSION_ID}/${SIG_NAME}"
+
+    if ! wget --spider --quiet "${IMAGE_URL}"; then
+        echo "$0: Image URL unavailable: $IMAGE_URL" >&2
+        exit 1
+    fi
+
+    if ! wget --spider --quiet "${SIG_URL}"; then
+        echo "$0: Image signature unavailable: $SIG_URL" >&2
+        exit 1
+    fi
+
+    # Setup GnuPG for verifying the image signature
+    export GNUPGHOME="${WORKDIR}/gnupg"
+    mkdir -p "${GNUPGHOME}"
+    if [ -n "${KEYFILE}" ]; then
+        gpg --batch --quiet --import < "${KEYFILE}"
+    else
+        gpg --batch --quiet --import <<< "${GPG_KEY}"
+    fi
+
+    echo "Downloading the signature for ${IMAGE_URL}..."
+    wget --no-verbose -O "${WORKDIR}/${SIG_NAME}" "${SIG_URL}"
+
+    echo "Downloading, writing and verifying ${IMAGE_NAME}..."
+    if ! wget --no-verbose -O - "${IMAGE_URL}" \
+        | tee >(bzip2 -cd >&3) \
+        | gpg --batch --trusted-key "${GPG_LONG_ID}" \
+            --verify "${WORKDIR}/${SIG_NAME}" -
+    then
+        local EEND=( "${PIPESTATUS[@]}" )
+        [ ${EEND[0]} -ne 0 ] && echo "${EEND[0]}: Download of ${IMAGE_NAME} did not complete" >&2
+        [ ${EEND[1]} -ne 0 ] && echo "${EEND[1]}: Cannot expand ${IMAGE_NAME} to ${DEVICE}" >&2
+        [ ${EEND[2]} -ne 0 ] && echo "${EEND[2]}: GPG signature verification failed for ${IMAGE_NAME}" >&2
+        exit 1
+    fi 3> >(write_to_disk)
+
+    VERSION_SUMMARY+=" ${CHANNEL_ID} ${VERSION_ID}${OEM_ID:+ (${OEM_ID})}"
+}
+
+function write_cloudinit() if [[ -n "${CLOUDINIT}${COPY_NET}" ]]; then
+    # The ROOT partition should be #9 but make no assumptions here!
+    # Also don't mount by label directly in case other devices conflict.
+    local ROOT_DEV=$(blkid -t "LABEL=ROOT" -o device "${DEVICE}"*)
+
+    mkdir -p "${WORKDIR}/rootfs"
+    case $(blkid -t "LABEL=ROOT" -o value -s TYPE "${ROOT_DEV}") in
+      "btrfs") mount -t btrfs -o subvol=root "${ROOT_DEV}" "${WORKDIR}/rootfs" ;;
+      *)       mount "${ROOT_DEV}" "${WORKDIR}/rootfs" ;;
+    esac
+    trap 'umount "${WORKDIR}/rootfs"' RETURN
+
+    if [[ -n "${CLOUDINIT}" ]]; then
+      echo "Installing cloud-config..."
+      mkdir -p "${WORKDIR}/rootfs/var/lib/flatcar-install"
+      cp "${CLOUDINIT}" "${WORKDIR}/rootfs/var/lib/flatcar-install/user_data"
+    fi
+
+    if [[ -n "${COPY_NET}" ]]; then
+      echo "Copying network units to root partition."
+      # Copy the entire directory, do not overwrite anything that might exist there, keep permissions, and copy the resolve.conf link as a file.
+      cp --recursive --no-clobber --preserve --dereference /run/systemd/network/* "${WORKDIR}/rootfs/etc/systemd/network"
+    fi
+fi
+
+function write_ignition() if [[ -n "${IGNITION}" ]]; then
+    # The OEM partition should be #6 but make no assumptions here!
+    # Also don't mount by label directly in case other devices conflict.
+    local OEM_DEV=$(blkid -t "LABEL=OEM" -o device "${DEVICE}"*)
+
+    mkdir -p "${WORKDIR}/oemfs"
+    mount "${OEM_DEV}" "${WORKDIR}/oemfs"
+    trap 'umount "${WORKDIR}/oemfs"' RETURN
+
+    echo "Installing Ignition config ${IGNITION}..."
+    cp "${IGNITION}" "${WORKDIR}/oemfs/config.ign"
+fi
+
+WORKDIR=$(mktemp --tmpdir -d flatcar-install.XXXXXXXXXX)
+trap 'error_output ; is_modified && wipefs --all --backup "${DEVICE}" ; rm -rf "${WORKDIR}"' EXIT
+
+if [ -n "${IMAGE_FILE}" ]; then
+    install_from_file
+else
+    install_from_url
+fi
+wait_for_disk
+write_cloudinit
+write_ignition
+
+rm -rf "${WORKDIR}"
+trap - EXIT
+
+echo "Success! ${VERSION_SUMMARY} is installed on ${DEVICE}"
