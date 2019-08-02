@@ -20,6 +20,23 @@ default_board() {
     esac
 }
 
+# Finds an unmounted disk with size greater than 10GB and prints it to stdout,
+# otherwise prints an empty line.
+find_smallest_unused_disk() {
+    lsblk -lnpdb -x SIZE -o NAME,SIZE $INCLUDE_MAJOR $EXCLUDE_MAJOR \
+        | (
+        while IFS= read -r line; do
+            drive=$(echo "$line" | awk '{print $1}')
+            size=$(echo "$line" | awk '{print $2}')
+            mountpoints=$(lsblk -ln -o MOUNTPOINT "$drive")
+            if [[ "$size" -gt 10000000000 ]] && [[ -z "$mountpoints" ]]; then
+                echo "$drive"
+            fi
+        done) \
+        | head -1
+    echo "" # Needed to have some output for $(func) when no disk was found
+}
+
 # Everything we do should be user-access only!
 umask 077
 
@@ -43,12 +60,19 @@ for f in /usr/share/oem/oem-release /etc/oem-release; do
     fi
 done
 
-USAGE="Usage: $0 -d <device> [options]
+USAGE="Usage: $0 {{-d <device>}|-s} [options]
 Options:
     -d DEVICE   Install Flatcar Linux to the given device.
+    -s          EXPERIMENTAL: Install Flatcar Linux to the smallest unmounted disk found
+                (min. size 10GB). It is recommended to use it with -e or -I to filter the
+                block devices by their major numbers. E.g., -e 7 to exclude loop devices
+                or -I 8,259 for certain disk types. Read more about the numbers here:
+                https://www.kernel.org/doc/Documentation/admin-guide/devices.txt.
     -V VERSION  Version to install (e.g. current) [default: ${VERSION_ID}].
     -B BOARD    Flatcar Linux board to use [default: ${BOARD}].
     -C CHANNEL  Release channel to use (e.g. beta) [default: ${CHANNEL_ID}].
+    -I|e <M,..> EXPERIMENTAL (used with -s): List of major device numbers to in-/exclude
+                when finding the smallest disk.
     -o OEM      OEM type to install (e.g. ami) [default: ${OEM_ID:-(none)}].
     -c CLOUD    Insert a cloud-init config to be executed on boot.
     -i IGNITION Insert an Ignition config to be executed on boot.
@@ -239,21 +263,24 @@ IMAGE_FILE=
 KEYFILE=
 VERSION_SUMMARY='Flatcar Linux'
 
-while getopts "V:B:C:d:o:c:i:t:b:k:f:nyvh" OPTION
+while getopts "V:B:C:I:d:o:c:e:i:t:b:k:f:nsyvh" OPTION
 do
     case $OPTION in
         V) VERSION_ID="$OPTARG"; VERSION_SPECIFIED=1 ;;
         B) BOARD="$OPTARG" ;;
         C) CHANNEL_ID="$OPTARG"; CHANNEL_SPECIFIED=1 ;;
+        I) INCLUDE_MAJOR="-I $OPTARG" ;;
         d) DEVICE="$OPTARG" ;;
         o) OEM_ID="$OPTARG" ;;
         c) CLOUDINIT="$OPTARG" ;;
+        e) EXCLUDE_MAJOR="-e $OPTARG" ;;
         i) IGNITION="$OPTARG" ;;
         t) ;; # compatibility option; previously set TMPDIR
         b) BASE_URL="${OPTARG%/}" ;;
         k) KEYFILE="$OPTARG" ;;
         f) IMAGE_FILE="$OPTARG" ;;
         n) COPY_NET=1;;
+        s) INSTALL_TO_SMALLEST=1 ;;
         y) DRY_RUN=1 ;;
         v) set -x ;;
         h) echo "$USAGE"; exit;;
@@ -276,10 +303,18 @@ Settings:
 }
 
 # Device is required, must not be a partition, must be writable
-if [[ -z "${DEVICE}" ]]; then
-    echo "$0: No target block device provided, -d is required." >&2
+if [[ -z "${DEVICE}" ]] && [[ -z "${INSTALL_TO_SMALLEST}" ]]; then
+    echo "$0: No target block device provided, either -d or -s is required." >&2
     echo "$USAGE" >&2
     exit 1
+fi
+
+if [[ -n "${INSTALL_TO_SMALLEST}" ]]; then
+    DEVICE="$(find_smallest_unused_disk)"
+    if [[ -z "${DEVICE}" ]]; then
+        echo "$0: Could not find smallest disk to install (min. 10GB)." >&2
+        exit 1
+    fi
 fi
 
 if ! [[ $(lsblk -n -d -o TYPE "${DEVICE}") =~ ^(disk|loop|lvm)$ ]]; then
