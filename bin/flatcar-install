@@ -76,7 +76,7 @@ Options:
     -o OEM      OEM type to install (e.g. ami) [default: ${OEM_ID:-(none)}].
     -c CLOUD    Insert a cloud-init config to be executed on boot.
     -i IGNITION Insert an Ignition config to be executed on boot.
-    -b BASEURL  URL to the image mirror (overrides BOARD).
+    -b BASEURL  URL to the image mirror (overrides BOARD and CHANNEL).
     -k KEYFILE  Override default GPG key for verifying image signature.
     -f IMAGE    Install unverified local image file to disk instead of fetching.
     -n          Copy generated network units to the root partition.
