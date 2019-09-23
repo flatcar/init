@@ -1,0 +1,7 @@
+# Exclude calico ipip tunnel devices from DHCP by default
+
+[Match]
+Name=cali*
+
+[Link]
+Unmanaged=yes
