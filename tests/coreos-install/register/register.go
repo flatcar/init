@@ -244,7 +244,7 @@ func (test Test) ValidateIgnition(t *testing.T, rootDir, config string) {
 		t.Fatalf("reading grub.cfg: %v", err)
 	}
 
-	if !util.RegexpContains(t, "flatcar.config.url=oem:///flatcar-install.json", data) {
+	if !util.RegexpContains(t, "ignition.config.url=oem:///flatcar-install.json", data) {
 		t.Fatalf("grub.cfg doesn't contain a reference to flatcar-install.json: %s", data)
 	}
 }
