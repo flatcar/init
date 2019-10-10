@@ -16,6 +16,7 @@ default_board() {
     fi
 
     case "$(uname -m)" in
+    aarch64 ) echo "arm64-usr" ;;
     * )       echo "amd64-usr" ;;
     esac
 }
