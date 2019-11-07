@@ -2,7 +2,7 @@
 # to the synthetic interface
 
 [Match]
-KernelCommandLine=coreos.oem.id=azure
+KernelCommandLine=flatcar.oem.id=azure
 # With NetworkManager, Azure uses a udev rule matching DRIVERS=="hv_pci".
 # This won't work with networkd because it only checks the driver of the
 # device itself, not its parents. All we can do instead is blacklist the
