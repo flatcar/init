@@ -24,18 +24,21 @@ default_board() {
 # Finds an unmounted disk with size greater than 10GB and prints it to stdout,
 # otherwise prints an empty line.
 find_smallest_unused_disk() {
-    lsblk -lnpdb -x SIZE -o NAME,SIZE $INCLUDE_MAJOR $EXCLUDE_MAJOR \
+    local disks="$(lsblk -lnpdb -x SIZE -o NAME,SIZE $INCLUDE_MAJOR $EXCLUDE_MAJOR \
         | (
         while IFS= read -r line; do
             drive=$(echo "$line" | awk '{print $1}')
             size=$(echo "$line" | awk '{print $2}')
             mountpoints=$(lsblk -ln -o MOUNTPOINT "$drive")
             if [[ "$size" -gt 10000000000 ]] && [[ -z "$mountpoints" ]]; then
-                echo "$drive"
+                echo "$drive" "$size"
             fi
-        done) \
-        | head -1
-    echo "" # Needed to have some output for $(func) when no disk was found
+        done))"
+    # Get smallest disk size by looking at first entry of $disks
+    local smallestsize="$(echo "$disks" | head -n 1 | cut -d ' ' -f 2)"
+    # If there more then one disk having the smallest size, sort them alphabetically and take the first one
+    local smallestdisk="$(echo "$disks" | grep "$smallestsize" | cut -d ' ' -f1 | sort | head -n 1)"
+    echo "$smallestdisk"
 }
 
 # Everything we do should be user-access only!
