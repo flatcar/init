@@ -226,15 +226,15 @@ func (test Test) WriteFile(t *testing.T, name, data string) string {
 func (test Test) ValidateIgnition(t *testing.T, rootDir, config string) {
 	oemPath := filepath.Join(rootDir, "usr", "share", "oem")
 
-	data, err := ioutil.ReadFile(filepath.Join(oemPath, "coreos-install.json"))
+	data, err := ioutil.ReadFile(filepath.Join(oemPath, "flatcar-install.json"))
 	if os.IsNotExist(err) {
-		t.Fatalf("couldn't find coreos-install.json")
+		t.Fatalf("couldn't find flatcar-install.json")
 	} else if err != nil {
-		t.Fatalf("reading coreos-install.json: %v", err)
+		t.Fatalf("reading flatcar-install.json: %v", err)
 	}
 
 	if string(data) != config {
-		t.Fatalf("coreos-install.json doesn't match: expected %s, received %s", config, data)
+		t.Fatalf("flatcar-install.json doesn't match: expected %s, received %s", config, data)
 	}
 
 	data, err = ioutil.ReadFile(filepath.Join(oemPath, "grub.cfg"))
@@ -244,21 +244,21 @@ func (test Test) ValidateIgnition(t *testing.T, rootDir, config string) {
 		t.Fatalf("reading grub.cfg: %v", err)
 	}
 
-	if !util.RegexpContains(t, "coreos.config.url=oem:///coreos-install.json", data) {
-		t.Fatalf("grub.cfg doesn't contain a reference to coreos-install.json: %s", data)
+	if !util.RegexpContains(t, "ignition.config.url=oem:///flatcar-install.json", data) {
+		t.Fatalf("grub.cfg doesn't contain a reference to flatcar-install.json: %s", data)
 	}
 }
 
 func (test Test) ValidateCloudConfig(t *testing.T, rootDir, config string) {
-	data, err := ioutil.ReadFile(filepath.Join(rootDir, "var", "lib", "coreos-install", "user_data"))
+	data, err := ioutil.ReadFile(filepath.Join(rootDir, "var", "lib", "flatcar-install", "user_data"))
 	if os.IsNotExist(err) {
-		t.Fatalf("couldn't find coreos-install/user_data")
+		t.Fatalf("couldn't find flatcar-install/user_data")
 	} else if err != nil {
-		t.Fatalf("reading coreos-install/user_data: %v", err)
+		t.Fatalf("reading flatcar-install/user_data: %v", err)
 	}
 
 	if string(data) != config {
-		t.Fatalf("coreos-install/user_data doesn't match: expected %s, received %s", config, data)
+		t.Fatalf("flatcar-install/user_data doesn't match: expected %s, received %s", config, data)
 	}
 }
 
@@ -274,15 +274,15 @@ func (test Test) ValidateOSRelease(t *testing.T, rootDir string) {
 		t.Fatalf("expected version differs: expected: %s, received: %s", *test.Version, data)
 	}
 
-	if test.Board != nil && *test.Board != util.RegexpSearch(t, "board", "COREOS_BOARD=\"(.*)\"", data) {
+	if test.Board != nil && *test.Board != util.RegexpSearch(t, "board", "FLATCAR_BOARD=\"(.*)\"", data) {
 		t.Fatalf("expected board differs: expected %s, received: %s", *test.Board, data)
 	}
 }
 
 func (test Test) ValidateChannel(t *testing.T, rootDir string) {
-	data, err := ioutil.ReadFile(filepath.Join(rootDir, "etc", "coreos", "update.conf"))
+	data, err := ioutil.ReadFile(filepath.Join(rootDir, "etc", "flatcar", "update.conf"))
 	if err != nil {
-		t.Fatalf("reading /etc/coreos/update.conf: %v", err)
+		t.Fatalf("reading /etc/flatcar/update.conf: %v", err)
 	}
 
 	if *test.Channel != util.RegexpSearch(t, "channel", "GROUP=(.*)", data) {
