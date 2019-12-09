@@ -24,18 +24,21 @@ default_board() {
 # Finds an unmounted disk with size greater than 10GB and prints it to stdout,
 # otherwise prints an empty line.
 find_smallest_unused_disk() {
-    lsblk -lnpdb -x SIZE -o NAME,SIZE $INCLUDE_MAJOR $EXCLUDE_MAJOR \
+    local disks="$(lsblk -lnpdb -x SIZE -o NAME,SIZE $INCLUDE_MAJOR $EXCLUDE_MAJOR \
         | (
         while IFS= read -r line; do
             drive=$(echo "$line" | awk '{print $1}')
             size=$(echo "$line" | awk '{print $2}')
             mountpoints=$(lsblk -ln -o MOUNTPOINT "$drive")
             if [[ "$size" -gt 10000000000 ]] && [[ -z "$mountpoints" ]]; then
-                echo "$drive"
+                echo "$drive" "$size"
             fi
-        done) \
-        | head -1
-    echo "" # Needed to have some output for $(func) when no disk was found
+        done))"
+    # Get smallest disk size by looking at first entry of $disks
+    local smallestsize="$(echo "$disks" | head -n 1 | cut -d ' ' -f 2)"
+    # If there more then one disk having the smallest size, sort them alphabetically and take the first one
+    local smallestdisk="$(echo "$disks" | grep "$smallestsize" | cut -d ' ' -f1 | sort | head -n 1)"
+    echo "$smallestdisk"
 }
 
 # Everything we do should be user-access only!
@@ -63,14 +66,14 @@ done
 
 USAGE="Usage: $0 {{-d <device>}|-s} [options]
 Options:
-    -d DEVICE   Install Flatcar Linux to the given device.
-    -s          EXPERIMENTAL: Install Flatcar Linux to the smallest unmounted disk found
+    -d DEVICE   Install Flatcar Container Linux to the given device.
+    -s          EXPERIMENTAL: Install Flatcar Container Linux to the smallest unmounted disk found
                 (min. size 10GB). It is recommended to use it with -e or -I to filter the
                 block devices by their major numbers. E.g., -e 7 to exclude loop devices
                 or -I 8,259 for certain disk types. Read more about the numbers here:
                 https://www.kernel.org/doc/Documentation/admin-guide/devices.txt.
     -V VERSION  Version to install (e.g. current) [default: ${VERSION_ID}].
-    -B BOARD    Flatcar Linux board to use [default: ${BOARD}].
+    -B BOARD    Flatcar Container Linux board to use [default: ${BOARD}].
     -C CHANNEL  Release channel to use (e.g. beta) [default: ${CHANNEL_ID}].
     -I|e <M,..> EXPERIMENTAL (used with -s): List of major device numbers to in-/exclude
                 when finding the smallest disk.
@@ -85,8 +88,8 @@ Options:
     -v          Super verbose, for debugging.
     -h          This ;-).
 
-This tool installs Flatcar Linux on a block device. If you PXE booted
-Flatcar Linux on a machine then use this tool to make a permanent install.
+This tool installs Flatcar Container Linux on a block device. If you PXE booted
+Flatcar Container Linux on a machine then use this tool to make a permanent install.
 "
 
 # Image signing key:
@@ -298,7 +301,7 @@ DEVICE=
 CLOUDINIT=
 IMAGE_FILE=
 KEYFILE=
-VERSION_SUMMARY='Flatcar Linux'
+VERSION_SUMMARY='Flatcar Container Linux'
 
 while getopts "V:B:C:I:d:o:c:e:i:t:b:k:f:nsyvh" OPTION
 do
@@ -471,7 +474,7 @@ function install_from_url() {
             echo "$0: version.txt unavailable: ${VERSIONTXT_URL}" >&2
             exit 1
         fi
-        echo "Current version of Flatcar Linux ${CHANNEL_ID} is ${VERSION_ID}"
+        echo "Current version of Flatcar Container Linux ${CHANNEL_ID} is ${VERSION_ID}"
     fi
 
     local IMAGE_URL="${BASE_URL}/${VERSION_ID}/${IMAGE_NAME}"
