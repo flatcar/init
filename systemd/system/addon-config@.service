@@ -4,4 +4,4 @@ ConditionPathExists=|/%I/authorized_keys
 
 [Service]
 Type=oneshot
-ExecStart=/usr/lib/coreos/addon_config /%I
+ExecStart=/usr/lib/flatcar/addon_config /%I
