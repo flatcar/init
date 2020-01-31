@@ -23,6 +23,7 @@ install:
 		$(DESTDIR)/usr/share/logrotate \
 		$(DESTDIR)/usr/share/ssh
 	install -m 755 bin/* $(DESTDIR)/usr/bin
+	ln -sf flatcar-install $(DESTDIR)/usr/bin/coreos-install
 	install -m 755 scripts/* $(DESTDIR)/usr/lib/flatcar
 	install -m 644 systemd/network/* $(DESTDIR)/usr/lib/systemd/network
 	install -m 755 systemd/system-generators/* \
