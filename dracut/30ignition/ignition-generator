@@ -42,13 +42,13 @@ if $(cmdline_bool flatcar.first_boot 0); then
     if [[ $(cmdline_arg flatcar.first_boot) = "detected" ]]; then
         add_requires ignition-quench.service
     fi
-    if [[ $(cmdline_arg flatcar.oem.id) == "packet" ]]; then
+    if [[ $(cmdline_arg flatcar.oem.id) == "packet" ]] || [[ $(cmdline_arg coreos.oem.id) == "packet" ]]; then
         add_requires flatcar-static-network.service
     fi
 
     # On EC2, shut down systemd-networkd if ignition fails so that the instance
     # fails EC2 instance checks.
-    if [[ $(cmdline_arg flatcar.oem.id) == "ec2" ]]; then
+    if [[ $(cmdline_arg flatcar.oem.id) == "ec2" ]] || [[ $(cmdline_arg coreos.oem.id) == "ec2" ]]; then
         mkdir -p ${UNIT_DIR}/systemd-networkd.service.d
         cat > ${UNIT_DIR}/systemd-networkd.service.d/10-conflict-emergency.conf <<EOF
 [Unit]
@@ -93,7 +93,7 @@ if [ -n "$RANDOMIZE_DISK_GUID" ]; then
     add_requires "disk-uuid@${escaped_guid}.service"
 fi
 
-if [[ $(cmdline_arg flatcar.oem.id) == "digitalocean" ]]; then
+if [[ $(cmdline_arg flatcar.oem.id) == "digitalocean" ]] || [[ $(cmdline_arg coreos.oem.id) == "digitalocean" ]]; then
     add_requires flatcar-digitalocean-network.service
 fi
 
@@ -102,4 +102,9 @@ if [[ $(systemd-detect-virt || true) =~ ^(kvm|qemu)$ ]]; then
     oem_id=qemu
 fi
 
-echo "OEM_ID=$(cmdline_arg flatcar.oem.id ${oem_id})" > /run/ignition.env
+oem_cmdline="$(cmdline_arg flatcar.oem.id ${oem_id})"
+if [[ "${oem_id}" = "${oem_cmdline}" ]]; then
+    oem_cmdline="$(cmdline_arg coreos.oem.id ${oem_id})"
+fi
+
+echo "OEM_ID=${oem_cmdline}" > /run/ignition.env
