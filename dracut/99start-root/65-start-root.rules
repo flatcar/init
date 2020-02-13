@@ -19,11 +19,16 @@ SUBSYSTEM!="block", GOTO="start_root_end"
 # Ignition may want to clobber partitions used in a raid array, so
 # skip assembling them when Ignition is going to run.
 IMPORT{cmdline}="flatcar.first_boot"
+IMPORT{cmdline}="coreos.first_boot"
 # Possible values for not running Ignition from 30ignition/ignition-generator
 ENV{flatcar.first_boot}=="", GOTO="start_root"
 ENV{flatcar.first_boot}=="0", GOTO="start_root"
 ENV{flatcar.first_boot}=="no", GOTO="start_root"
 ENV{flatcar.first_boot}=="off", GOTO="start_root"
+ENV{coreos.first_boot}=="", GOTO="start_root"
+ENV{coreos.first_boot}=="0", GOTO="start_root"
+ENV{coreos.first_boot}=="no", GOTO="start_root"
+ENV{coreos.first_boot}=="off", GOTO="start_root"
 GOTO="start_root_end"
 
 LABEL="start_root"
