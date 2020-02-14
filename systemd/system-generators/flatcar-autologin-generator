@@ -74,8 +74,11 @@ autologin() {
 read -r CMDLINE </proc/cmdline;
 
 for i in $CMDLINE; do
-    case "$i" in
-         flatcar.autologin*) autologin "$i" ;;
-    esac
+    prefix="$(echo "$i" | awk -F'.' '{print $1}')"
+    if [ "$prefix" = "coreos" ] || [ "$prefix" = "flatcar" ]; then
+        case "$i" in
+             *.autologin*) autologin "$i" ;;
+        esac
+    fi
 done
 
