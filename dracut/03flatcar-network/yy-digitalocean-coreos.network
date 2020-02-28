@@ -1,6 +1,6 @@
 [Match]
 KernelCommandLine=coreos.oem.id=digitalocean
-Name=e*
+Name=eth0
 
 [Network]
 DHCP=yes
