@@ -1,6 +1,6 @@
 [Match]
 KernelCommandLine=flatcar.oem.id=digitalocean
-Name=e*
+Name=eth0
 
 [Network]
 DHCP=yes
