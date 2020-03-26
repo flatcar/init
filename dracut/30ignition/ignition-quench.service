@@ -16,4 +16,4 @@ After=sysroot-boot.service
 Type=oneshot
 # We will only run if GRUB detected this file. Fail if we are unable to
 # remove it, rather than risking rerunning Ignition at next boot.
-ExecStart=/bin/sh -c 'if [ ! -e /sysroot/boot/flatcar/first_boot ] && [ ! -e /sysroot/boot/coreos/first_boot ]; then echo "error: /sysroot/boot/(flatcar|coreos)/first_boot not found"; exit 1; else  [ -e /sysroot/boot/flatcar/first_boot ] && rm /sysroot/boot/flatcar/first_boot; [ -e /sysroot/boot/coreos/first_boot ] && rm /sysroot/boot/coreos/first_boot; fi'
+ExecStart=/bin/sh -c 'if [ ! -e /sysroot/boot/flatcar/first_boot ] && [ ! -e /sysroot/boot/coreos/first_boot ]; then echo "error: /sysroot/boot/(flatcar|coreos)/first_boot not found"; exit 1; else rm -f /sysroot/boot/flatcar/first_boot /sysroot/boot/coreos/first_boot; fi'
