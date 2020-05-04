@@ -77,7 +77,7 @@ Options:
     -C CHANNEL  Release channel to use (e.g. beta) [default: ${CHANNEL_ID}].
     -I|e <M,..> EXPERIMENTAL (used with -s): List of major device numbers to in-/exclude
                 when finding the smallest disk.
-    -o OEM      OEM type to install (e.g. ami) [default: ${OEM_ID:-(none)}].
+    -o OEM      OEM type to install (e.g. ami), using flatcar_production_<OEM>_image.bin.bz2 [default: ${OEM_ID:-(none)}].
     -c CLOUD    Insert a cloud-init config to be executed on boot.
     -i IGNITION Insert an Ignition config to be executed on boot.
     -b BASEURL  URL to the image mirror (overrides BOARD and CHANNEL).
