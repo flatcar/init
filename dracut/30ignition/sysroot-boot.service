@@ -11,6 +11,10 @@ RequiresMountsFor=/sysroot
 Requires=initrd-setup-root.service
 After=initrd-setup-root.service
 
+# This is to make sure that /sysroot/boot is unmounted before we start
+# switching root in initrd-switch-root.target.
+Before=initrd-switch-root.target
+
 Conflicts=dracut-emergency.service emergency.service emergency.target
 Conflicts=initrd-switch-root.target umount.target
 
