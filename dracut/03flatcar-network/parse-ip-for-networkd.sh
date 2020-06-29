@@ -71,6 +71,7 @@ for p in $(getargs ip=); do
     # Enough validation, write the network file
     # Count down so that early ip= arguments are overridden by later ones
     _net_file=/etc/systemd/network/10-dracut-cmdline-$(( 99 - _net_count++ )).network
+    mkdir -p /etc/systemd/network
     echo '[Match]' > $_net_file
     [ -n "$dev" ] && echo "Name=$dev" >> $_net_file
     echo '[Link]' >> $_net_file
