@@ -1,0 +1,7 @@
+# Exclude Weave Net devices from DHCP by default
+
+[Match]
+Name=weave datapath vxlan-6784
+
+[Link]
+Unmanaged=yes
