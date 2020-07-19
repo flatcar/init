@@ -1,6 +1,9 @@
 [Network]
 DHCP=yes
 
+[Match]
+Name=*
+
 [DHCP]
 UseMTU=true
 UseDomains=true
