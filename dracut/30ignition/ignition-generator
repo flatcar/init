@@ -87,10 +87,10 @@ Type=oneshot
 ExecStart=/usr/sbin/ignition-setup ${nopxe:+normal} ${pxe:+pxe}
 EOF
 
-RANDOMIZE_DISK_GUID=$(cmdline_arg flatcar.randomize_disk_guid)
-if [ -n "$RANDOMIZE_DISK_GUID" ]; then
-    escaped_guid=$(systemd-escape --path "/dev/disk/by-diskuuid/$RANDOMIZE_DISK_GUID")
-    add_requires "disk-uuid@${escaped_guid}.service"
+# Call the disk UUID randomizer whenever we're not PXE booting
+# The unit will check if it needs to act or not.
+if [ "${nopxe}" = 1 ]; then
+    add_requires "disk-uuid.service"
 fi
 
 if [[ $(cmdline_arg flatcar.oem.id) == "digitalocean" ]] || [[ $(cmdline_arg coreos.oem.id) == "digitalocean" ]]; then

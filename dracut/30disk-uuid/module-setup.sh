@@ -7,8 +7,11 @@ install() {
         sgdisk \
         cgpt
 
-    inst_simple "$moddir/disk-uuid@.service" \
-        "$systemdsystemunitdir/disk-uuid@.service"
+    inst_script "$moddir/disk-uuid.sh" \
+        "/usr/sbin/disk-uuid"
+
+    inst_simple "$moddir/disk-uuid.service" \
+        "$systemdsystemunitdir/disk-uuid.service"
 
     inst_rules "$moddir/90-disk-uuid.rules"
 }
