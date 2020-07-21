@@ -73,7 +73,7 @@ for p in $(getargs ip=); do
     _net_file=/etc/systemd/network/10-dracut-cmdline-$(( 99 - _net_count++ )).network
     mkdir -p /etc/systemd/network
     echo '[Match]' > $_net_file
-    [ -n "$dev" ] && echo "Name=$dev" >> $_net_file
+    _dev=${dev:-"*"}; echo "Name=$_dev" >> $_net_file
     echo '[Link]' >> $_net_file
     [ -n "$macaddr" ] && echo "MACAddress=$macaddr" >> $_net_file
     [ -n "$mtu" ] && echo "MTUBytes=$mtu" >> $_net_file
