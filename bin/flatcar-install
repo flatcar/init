@@ -357,7 +357,7 @@ if [[ -n "${INSTALL_TO_SMALLEST}" ]]; then
     fi
 fi
 
-if ! [[ $(lsblk -n -d -o TYPE "${DEVICE}") =~ ^(disk|loop|lvm)$ ]]; then
+if ! [[ $(lsblk -n -d -o TYPE "${DEVICE}") =~ ^(disk|mpath|loop|lvm)$ ]]; then
     echo "$0: Target block device (${DEVICE}) is not a full disk." >&2
     exit 1
 fi
