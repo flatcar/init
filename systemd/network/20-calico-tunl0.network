@@ -1,0 +1,7 @@
+# Exclude Calico's IP-in-IP tunnel from configuration through networkd
+
+[Match]
+Name=tunl0
+
+[Link]
+Unmanaged=yes

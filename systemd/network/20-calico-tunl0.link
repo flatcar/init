@@ -1,0 +1,7 @@
+# Disable TX offload for Calico's IP-in-IP tunnel to enforce checksum calculation
+[Match]
+OriginalName=tunl0
+Type=tunnel
+
+[Link]
+TransmitChecksumOffload=off
