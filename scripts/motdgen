@@ -17,3 +17,11 @@ echo -e "\e[${ANSI_COLOR}m${NAME}\e[39m ${GROUP} (${VERSION})" > /run/flatcar/mo
 if [[ -d "/etc/motd.d" ]]; then
 	cat /etc/motd.d/*.conf 2>/dev/null >> /run/flatcar/motd || true
 fi
+
+if [[ "${GROUP}" =~ "lts" ]] && { [[ "${DOWNLOAD_USER}" = "" ]] || [[ "${DOWNLOAD_PASSWORD}" = "" ]] ; }; then
+	echo "/etc/flatcar/update.conf: DOWNLOAD_USER and DOWNLOAD_PASSWORD are missing to download LTS updates." >> /run/flatcar/motd
+fi
+if [[ "${GROUP}" = "lts" ]] && [[ "${SERVER}" = "https://public.update.flatcar-linux.net/v1/update/" ]]; then
+	echo -n "/etc/flatcar/update.conf: GROUP=lts on the public update server is a placeholder and can't be used directly, " >> /run/flatcar/motd
+	echo "use GROUP=lts-STREAM or your own update server with a managed 'lts' group." >> /run/flatcar/motd
+fi
