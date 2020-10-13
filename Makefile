@@ -37,7 +37,6 @@ install:
 	install -m 644 configs/tmpfiles.d/* $(DESTDIR)/usr/lib/tmpfiles.d/
 	cp -a systemd/system/* $(DESTDIR)/usr/lib/systemd/system
 	ln -sf ../run/issue $(DESTDIR)/etc/issue
-	ln -sf flatcar $(DESTDIR)/etc/coreos
 	ln -sf flatcar $(DESTDIR)/usr/lib/coreos
 	ln -sf flatcar $(DESTDIR)/usr/share/coreos
 
