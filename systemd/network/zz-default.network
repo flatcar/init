@@ -1,5 +1,6 @@
 [Network]
 DHCP=yes
+KeepConfiguration=dhcp-on-stop
 
 [Match]
 Name=*

@@ -4,6 +4,7 @@ KernelCommandLine=!root
 
 [Network]
 DHCP=yes
+KeepConfiguration=dhcp-on-stop
 
 [DHCP]
 ClientIdentifier=mac
