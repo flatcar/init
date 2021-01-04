@@ -1,0 +1,6 @@
+# Prevent systemd-networkd from handling the MACAddresses of veth devices
+[Match]
+Driver=veth
+
+[Link]
+MACAddressPolicy=none
