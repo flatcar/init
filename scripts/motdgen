@@ -16,7 +16,7 @@ OEM=""
 if [ -f /usr/share/oem/oem-release ]; then
   OEM="$(source /usr/share/oem/oem-release; echo " for $NAME")"
 fi
-echo -e "\e[${ANSI_COLOR}m${NAME}\e[39m ${GROUP} (${VERSION})${OEM}" > /run/flatcar/motd
+echo -e "\e[${ANSI_COLOR}m${NAME}\e[39m ${GROUP} ${VERSION}${OEM}" > /run/flatcar/motd
 
 if [[ -d "/etc/motd.d" ]]; then
 	cat /etc/motd.d/*.conf 2>/dev/null >> /run/flatcar/motd || true
