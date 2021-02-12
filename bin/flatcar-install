@@ -339,6 +339,8 @@ IMAGE_FILE=
 KEYFILE=
 VERSION_SUMMARY='Flatcar Container Linux'
 
+WGET_ARGS="--tries 10 --timeout=20 --retry-connrefused"
+
 while getopts "V:B:C:I:d:o:c:e:i:t:b:k:f:nsyvh" OPTION
 do
     case $OPTION in
@@ -505,7 +507,7 @@ function install_from_url() {
     # if the version is "current", resolve the actual version number
     if [[ "${VERSION_ID}" == "current" ]]; then
         local VERSIONTXT_URL="${BASE_URL}/${VERSION_ID}/version.txt"
-        VERSION_ID=$(wget -qO- "${VERSIONTXT_URL}" | sed -n 's/^FLATCAR_VERSION=//p')
+        VERSION_ID=$(wget ${WGET_ARGS} -qO- "${VERSIONTXT_URL}" | sed -n 's/^FLATCAR_VERSION=//p')
         if [[ -z "${VERSION_ID}" ]]; then
             echo "$0: version.txt unavailable: ${VERSIONTXT_URL}" >&2
             exit 1
@@ -517,12 +519,12 @@ function install_from_url() {
     local SIG_NAME="${IMAGE_NAME}.sig"
     local SIG_URL="${BASE_URL}/${VERSION_ID}/${SIG_NAME}"
 
-    if ! wget --spider --quiet "${IMAGE_URL}"; then
+    if ! wget ${WGET_ARGS} --spider --quiet "${IMAGE_URL}"; then
         echo "$0: Image URL unavailable: $IMAGE_URL" >&2
         exit 1
     fi
 
-    if ! wget --spider --quiet "${SIG_URL}"; then
+    if ! wget ${WGET_ARGS} --spider --quiet "${SIG_URL}"; then
         echo "$0: Image signature unavailable: $SIG_URL" >&2
         exit 1
     fi
@@ -537,10 +539,10 @@ function install_from_url() {
     fi
 
     echo "Downloading the signature for ${IMAGE_URL}..."
-    wget --no-verbose -O "${WORKDIR}/${SIG_NAME}" "${SIG_URL}"
+    wget ${WGET_ARGS} --no-verbose -O "${WORKDIR}/${SIG_NAME}" "${SIG_URL}"
 
     echo "Downloading, writing and verifying ${IMAGE_NAME}..."
-    if ! wget --no-verbose -O - "${IMAGE_URL}" \
+    if ! wget ${WGET_ARGS} --no-verbose -O - "${IMAGE_URL}" \
         | tee >(bzip2 -cd >&3) \
         | gpg --batch --trusted-key "${GPG_LONG_ID}" \
             --verify "${WORKDIR}/${SIG_NAME}" -
