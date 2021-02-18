@@ -57,6 +57,12 @@ Conflicts=emergency.service
 Conflicts=dracut-emergency.service
 EOF
     fi
+    if [[ $(cmdline_arg flatcar.oem.id) == "ec2" ]] || [[ $(cmdline_arg coreos.oem.id) == "ec2" ]]; then
+        add_requires flatcar-metadata-hostname.service
+    fi
+    if [[ $(cmdline_arg flatcar.oem.id) == "openstack" ]] || [[ $(cmdline_arg coreos.oem.id) == "openstack" ]]; then
+        add_requires flatcar-openstack-hostname.service
+    fi
 fi
 
 # Write ignition-setup.service customized for PXE/ISO or regular boot

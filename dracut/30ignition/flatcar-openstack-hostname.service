@@ -1,0 +1,14 @@
+[Unit]
+Description=Flatcar OpenStack Metadata Hostname Agent
+DefaultDependencies=false
+Before=initrd.target
+After=systemd-networkd.service initrd-root-fs.target
+Wants=systemd-networkd.service initrd-root-fs.target
+
+# Ensure Ignition can overwrite /etc/hostname
+Before=ignition-files.service
+
+[Service]
+Type=oneshot
+# Special case: the oem_id openstack does not match the afterburn name openstack-metadata
+ExecStart=/usr/bin/coreos-metadata --provider openstack-metadata --hostname=/sysroot/etc/hostname

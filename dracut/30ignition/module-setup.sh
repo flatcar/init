@@ -52,6 +52,12 @@ install() {
     inst_simple "$moddir/flatcar-static-network.service" \
         "$systemdsystemunitdir/flatcar-static-network.service"
 
+    inst_simple "$moddir/flatcar-metadata-hostname.service" \
+        "$systemdsystemunitdir/flatcar-metadata-hostname.service"
+
+    inst_simple "$moddir/flatcar-openstack-hostname.service" \
+        "$systemdsystemunitdir/flatcar-openstack-hostname.service"
+
     inst_rules \
         60-cdrom_id.rules \
         66-azure-storage.rules \
