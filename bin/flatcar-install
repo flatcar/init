@@ -67,6 +67,7 @@ done
 USAGE="Usage: $0 {{-d <device>}|-s} [options]
 Options:
     -d DEVICE   Install Flatcar Container Linux to the given device.
+    -D          Download a Flatcar Container Linux image to the current directory, without installing it
     -s          EXPERIMENTAL: Install Flatcar Container Linux to the smallest unmounted disk found
                 (min. size 10GB). It is recommended to use it with -e or -I to filter the
                 block devices by their major numbers. E.g., -e 7 to exclude loop devices
@@ -341,12 +342,13 @@ VERSION_SUMMARY='Flatcar Container Linux'
 
 WGET_ARGS="--tries 10 --timeout=20 --retry-connrefused"
 
-while getopts "V:B:C:I:d:o:c:e:i:t:b:k:f:nsyvh" OPTION
+while getopts "V:B:C:DI:d:o:c:e:i:t:b:k:f:nsyvh" OPTION
 do
     case $OPTION in
         V) VERSION_ID="$OPTARG"; VERSION_SPECIFIED=1 ;;
         B) BOARD="$OPTARG" ;;
         C) CHANNEL_ID="$OPTARG"; CHANNEL_SPECIFIED=1 ;;
+        D) DOWNLOAD_ONLY='true';;
         I) INCLUDE_MAJOR="-I $OPTARG" ;;
         d) DEVICE="$OPTARG" ;;
         o) OEM_ID="$OPTARG" ;;
@@ -380,51 +382,55 @@ Settings:
     IMAGE:    ${IMAGE_FILE:-(none)}"
 }
 
-# Device is required, must not be a partition, must be writable
-if [[ -z "${DEVICE}" ]] && [[ -z "${INSTALL_TO_SMALLEST}" ]]; then
-    echo "$0: No target block device provided, either -d or -s is required." >&2
-    echo "$USAGE" >&2
-    exit 1
-fi
+# Run Device checks, ignore if the download only flag is present
 
-if [[ -n "${INSTALL_TO_SMALLEST}" ]]; then
-    DEVICE="$(find_smallest_unused_disk)"
-    if [[ -z "${DEVICE}" ]]; then
-        echo "$0: Could not find smallest disk to install (min. 10GB)." >&2
-        exit 1
-    fi
-fi
-
-if ! [[ $(lsblk -n -d -o TYPE "${DEVICE}") =~ ^(disk|mpath|loop|lvm)$ ]]; then
-    echo "$0: Target block device (${DEVICE}) is not a full disk." >&2
-    exit 1
-fi
-
-if [[ ! -w "${DEVICE}" ]]; then
-    echo "$0: Target block device (${DEVICE}) is not writable (are you root?)" >&2
-    exit 1
-fi
-
-if [[ -n "${CLOUDINIT}" ]]; then
-    if [[ ! -f "${CLOUDINIT}" ]]; then
-        echo "$0: Cloud config file (${CLOUDINIT}) does not exist." >&2
+if [[ -z "${DOWNLOAD_ONLY}" ]]; then
+    # Device is required, must not be a partition, must be writable
+    if [[ -z "${DEVICE}" ]] && [[ -z "${INSTALL_TO_SMALLEST}" ]]; then
+        echo "$0: No target block device provided, either -d or -s is required. Or use -D to download image." >&2
+        echo "$USAGE" >&2
         exit 1
     fi
 
-    if type -P coreos-cloudinit >/dev/null; then
-        if ! coreos-cloudinit -from-file="${CLOUDINIT}" -validate; then
-            echo "$0: Cloud config file (${CLOUDINIT}) is not valid." >&2
+    if [[ -n "${INSTALL_TO_SMALLEST}" ]]; then
+        DEVICE="$(find_smallest_unused_disk)"
+        if [[ -z "${DEVICE}" ]]; then
+            echo "$0: Could not find smallest disk to install (min. 10GB)." >&2
             exit 1
         fi
-    else
-        echo "$0: coreos-cloudinit not found. Could not validate config. Continuing..." >&2
     fi
-fi
 
-if [[ -n "${IGNITION}" ]]; then
-    if [[ ! -f "${IGNITION}" ]]; then
-        echo "$0: Ignition config file (${IGNITION}) does not exist." >&2
+    if ! [[ $(lsblk -n -d -o TYPE "${DEVICE}") =~ ^(disk|mpath|loop|lvm)$ ]]; then
+        echo "$0: Target block device (${DEVICE}) is not a full disk." >&2
         exit 1
+    fi
+
+    if [[ ! -w "${DEVICE}" ]]; then
+        echo "$0: Target block device (${DEVICE}) is not writable (are you root?)" >&2
+        exit 1
+    fi
+
+    if [[ -n "${CLOUDINIT}" ]]; then
+        if [[ ! -f "${CLOUDINIT}" ]]; then
+            echo "$0: Cloud config file (${CLOUDINIT}) does not exist." >&2
+            exit 1
+        fi
+
+        if type -P coreos-cloudinit >/dev/null; then
+            if ! coreos-cloudinit -from-file="${CLOUDINIT}" -validate; then
+                echo "$0: Cloud config file (${CLOUDINIT}) is not valid." >&2
+                exit 1
+            fi
+        else
+            echo "$0: coreos-cloudinit not found. Could not validate config. Continuing..." >&2
+        fi
+    fi
+
+    if [[ -n "${IGNITION}" ]]; then
+        if [[ ! -f "${IGNITION}" ]]; then
+            echo "$0: Ignition config file (${IGNITION}) does not exist." >&2
+            exit 1
+        fi
     fi
 fi
 
@@ -480,12 +486,12 @@ function install_from_file() {
     VERSION_SUMMARY+=" (from ${IMAGE_FILE})"
 }
 
-function install_from_url() {
+function prep_url(){
     # Ensure that required executables exist before proceeding
     type -P wget >/dev/null || { echo 'Missing wget!' >&2 ; exit 1 ; }
     type -P gpg >/dev/null || { echo 'Missing gpg!' >&2 ; exit 1 ; }
 
-    local IMAGE_NAME="flatcar_production_image.bin.bz2"
+    IMAGE_NAME="flatcar_production_image.bin.bz2"
     if [[ -n "${OEM_ID}" ]]; then
         IMAGE_NAME="flatcar_production_${OEM_ID}_image.bin.bz2"
     fi
@@ -515,10 +521,9 @@ function install_from_url() {
         echo "Current version of Flatcar Container Linux ${CHANNEL_ID} is ${VERSION_ID}"
     fi
 
-    local IMAGE_URL="${BASE_URL}/${VERSION_ID}/${IMAGE_NAME}"
-    local SIG_NAME="${IMAGE_NAME}.sig"
-    local SIG_URL="${BASE_URL}/${VERSION_ID}/${SIG_NAME}"
-
+    IMAGE_URL="${BASE_URL}/${VERSION_ID}/${IMAGE_NAME}"
+    SIG_NAME="${IMAGE_NAME}.sig"
+    SIG_URL="${BASE_URL}/${VERSION_ID}/${SIG_NAME}"
     if ! wget ${WGET_ARGS} --spider --quiet "${IMAGE_URL}"; then
         echo "$0: Image URL unavailable: $IMAGE_URL" >&2
         exit 1
@@ -540,7 +545,26 @@ function install_from_url() {
 
     echo "Downloading the signature for ${IMAGE_URL}..."
     wget ${WGET_ARGS} --no-verbose -O "${WORKDIR}/${SIG_NAME}" "${SIG_URL}"
+   
+    VERSION_SUMMARY+=" ${CHANNEL_ID} ${VERSION_ID}${OEM_ID:+ (${OEM_ID})}"
+}
 
+function download_from_url(){
+    prep_url
+    echo "Downloading, writing and verifying ${IMAGE_NAME}..."
+    if ! wget ${WGET_ARGS} --no-verbose -O "${PWD}/${IMAGE_NAME}" "${IMAGE_URL}"; then
+        echo "Could not download ${IMAGE_NAME}" >&2
+        exit 1
+    fi
+
+    if ! gpg --batch --trusted-key "${GPG_LONG_ID}" --verify "${WORKDIR}/${SIG_NAME}" "${PWD}/${IMAGE_NAME}"; then
+        echo "Could not verify ${IMAGE_NAME}." >&2
+        exit 1
+    fi
+}
+
+function install_from_url() {
+    prep_url
     echo "Downloading, writing and verifying ${IMAGE_NAME}..."
     if ! wget ${WGET_ARGS} --no-verbose -O - "${IMAGE_URL}" \
         | tee >(bzip2 -cd >&3) \
@@ -553,8 +577,6 @@ function install_from_url() {
         [ ${EEND[2]} -ne 0 ] && echo "${EEND[2]}: GPG signature verification failed for ${IMAGE_NAME}" >&2
         exit 1
     fi 3> >(write_to_disk)
-
-    VERSION_SUMMARY+=" ${CHANNEL_ID} ${VERSION_ID}${OEM_ID:+ (${OEM_ID})}"
 }
 
 function write_cloudinit() if [[ -n "${CLOUDINIT}${COPY_NET}" ]]; then
@@ -598,16 +620,20 @@ fi
 WORKDIR=$(mktemp --tmpdir -d flatcar-install.XXXXXXXXXX)
 trap 'error_output ; is_modified && wipefs --all --backup "${DEVICE}" ; rm -rf "${WORKDIR}"' EXIT
 
-if [ -n "${IMAGE_FILE}" ]; then
-    install_from_file
+if [[ "${DOWNLOAD_ONLY}" = 'true' ]]; then
+    download_from_url
+    echo "Success! ${VERSION_SUMMARY} has been downloaded to the current directory"
 else
-    install_from_url
+    if [ -n "${IMAGE_FILE}" ]; then
+        install_from_file
+    else
+        install_from_url
+    fi
+    wait_for_disk
+    write_cloudinit
+    write_ignition
+    echo "Success! ${VERSION_SUMMARY} is installed on ${DEVICE}"
 fi
-wait_for_disk
-write_cloudinit
-write_ignition
 
 rm -rf "${WORKDIR}"
 trap - EXIT
-
-echo "Success! ${VERSION_SUMMARY} is installed on ${DEVICE}"
