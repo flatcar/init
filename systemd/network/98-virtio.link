@@ -1,8 +1,9 @@
-# systemd has re-enabled the persistent device naming scheme for virtio.
-# Migration will come later but for now preserve the old behavior by the
-# "slot" and "path" name policies.
+# Use the kernel ifnames like eth0 for virtio network interfaces but
+# set predictable ifnames as alternative names (shown in "ip a" and
+# also allowed in "Match=" networkd statements).
 [Match]
 Driver=virtio_net
 [Link]
 NamePolicy=kernel database onboard
+AlternativeNamesPolicy=database onboard slot path
 MACAddressPolicy=persistent
