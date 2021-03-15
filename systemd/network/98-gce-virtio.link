@@ -1,9 +1,13 @@
 # Use the kernel ifnames like eth0 for virtio network interfaces but
 # set predictable ifnames as alternative names (shown in "ip a" and
 # also allowed in "Match=" networkd statements).
+# The old name ens4v1 was hardcoded in a udev rule which did not
+# work anymore.
 [Match]
 Driver=virtio_net
+KernelCommandLine=flatcar.oem.id=gce
 [Link]
 NamePolicy=kernel database onboard
 AlternativeNamesPolicy=database onboard slot path
+AlternativeName=ens4v1
 MACAddressPolicy=persistent
