@@ -1,0 +1,11 @@
+[Match]
+KernelCommandLine=netroot
+
+[Network]
+DHCP=yes
+# Root is on the network, it can't go down at switch-root
+KeepConfiguration=yes
+
+[DHCP]
+UseMTU=true
+UseDomains=true
