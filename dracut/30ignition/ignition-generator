@@ -32,6 +32,14 @@ add_requires() {
     ln -sf "../${name}" "${requires_dir}/${name}"
 }
 
+add_wants() {
+    local name="$1"
+    local wants_dir="${UNIT_DIR}/initrd.target.wants"
+    mkdir -p "${wants_dir}"
+    ln -sf "../${name}" "${wants_dir}/${name}"
+}
+
+
 # This can't be done with ConditionKernelCommandLine because that always
 # starts the unit's dependencies. We want to start networkd only on first
 # boot.
@@ -58,10 +66,10 @@ Conflicts=dracut-emergency.service
 EOF
     fi
     if [[ $(cmdline_arg flatcar.oem.id) == "ec2" ]] || [[ $(cmdline_arg coreos.oem.id) == "ec2" ]]; then
-        add_requires flatcar-metadata-hostname.service
+        add_wants flatcar-metadata-hostname.service
     fi
     if [[ $(cmdline_arg flatcar.oem.id) == "openstack" ]] || [[ $(cmdline_arg coreos.oem.id) == "openstack" ]]; then
-        add_requires flatcar-openstack-hostname.service
+        add_wants flatcar-openstack-hostname.service
     fi
 fi
 
