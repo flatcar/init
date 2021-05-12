@@ -30,7 +30,8 @@ find_smallest_unused_disk() {
             drive=$(echo "$line" | awk '{print $1}')
             size=$(echo "$line" | awk '{print $2}')
             mountpoints=$(lsblk -ln -o MOUNTPOINT "$drive")
-            if [[ "$size" -gt 10000000000 ]] && [[ -z "$mountpoints" ]]; then
+            device_mapper_usages=$(lsblk -ln -o PATH "$drive" |  grep -v "^$drive")
+            if [[ "$size" -gt 10000000000 ]] && [[ -z "$mountpoints" ]] && [[ -z "${device_mapper_usages}" ]]; then
                 echo "$drive" "$size"
             fi
         done))"
