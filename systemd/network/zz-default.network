@@ -4,6 +4,7 @@ KeepConfiguration=dhcp-on-stop
 
 [Match]
 Name=*
+Type=!loopback
 
 [DHCP]
 UseMTU=true
