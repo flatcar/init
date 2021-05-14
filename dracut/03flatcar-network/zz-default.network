@@ -1,5 +1,6 @@
 [Match]
 Name=*
+Type=!loopback
 
 [Network]
 DHCP=yes
