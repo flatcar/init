@@ -13,4 +13,4 @@ ConditionPathExists=!/usr/.noupdate
 What=/dev/disk/by-label/OEM
 Where=/usr/share/oem
 Options=nodev
-Type=ext4
+Type=auto
