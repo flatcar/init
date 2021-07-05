@@ -21,7 +21,7 @@ GOTO="azure_end"
 
 # Create the symlinks
 LABEL="azure_names"
-ENV{DEVTYPE}=="disk", SYMLINK+="disk/azure/$env{fabric_name}"
-ENV{DEVTYPE}=="partition", SYMLINK+="disk/azure/$env{fabric_name}-part%n"
+ENV{DEVTYPE}=="disk", SYMLINK+="disk/azure/$env{fabric_name}", TAG+="systemd"
+ENV{DEVTYPE}=="partition", SYMLINK+="disk/azure/$env{fabric_name}-part%n", TAG+="systemd"
 
 LABEL="azure_end"
