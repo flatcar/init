@@ -28,7 +28,7 @@ ENV{fabric_name}=="scsi0/lun2", GOTO="walinuxagent_end"
 
 # Create the symlinks.
 LABEL="wa_azure_names"
-ENV{DEVTYPE}=="disk", SYMLINK+="disk/azure/$env{fabric_name}"
-ENV{DEVTYPE}=="partition", SYMLINK+="disk/azure/$env{fabric_name}-part%n"
+ENV{DEVTYPE}=="disk", SYMLINK+="disk/azure/$env{fabric_name}", TAG+="systemd"
+ENV{DEVTYPE}=="partition", SYMLINK+="disk/azure/$env{fabric_name}-part%n", TAG+="systemd"
 
 LABEL="walinuxagent_end"
