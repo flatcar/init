@@ -75,7 +75,7 @@ if [[ -n "${usr}" && -n "${usrhash}" ]]; then
 	Type=oneshot
 	RemainAfterExit=yes
 	# Try to query the filesystem size dynamically but otherwise fall back to the expected value from the image GPT layout
-	ExecStart=/bin/sh -c '/sbin/veritysetup create usr --hash-offset="\$(e2size ${usr} || echo 1065345024)" "${usr}" "${usr}" "${usrhash}"'
+	ExecStart=/bin/sh -c '/sbin/veritysetup create usr --panic-on-corruption --hash-offset="\$(e2size ${usr} || echo 1065345024)" "${usr}" "${usr}" "${usrhash}"'
 	# If there's a hash mismatch during table initialization,
 	# veritysetup reports it on stderr but still exits 0, and
 	# dev-mapper-usr.device ends up waiting indefinitely. Manually
