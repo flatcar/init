@@ -1,0 +1,7 @@
+# Exclude Cilium's vxlan interface (and any other Cilium interfaces) from configuration through networkd
+
+[Match]
+Name=cilium*
+
+[Link]
+Unmanaged=yes
