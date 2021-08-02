@@ -22,6 +22,10 @@ if [[ -d "/etc/motd.d" ]]; then
 	cat /etc/motd.d/*.conf 2>/dev/null >> /run/flatcar/motd || true
 fi
 
+if ! ( mount | grep -q cgroup2 ); then
+	echo -e "\e[33mWarning\e[39m: using legacy cgroups" >> /run/flatcar/motd
+fi
+
 if [[ "${GROUP}" =~ "lts" ]]; then
 	echo "FCL LTS documentation: https://kinvolk.io/fcl-lts-docs" >> /run/flatcar/motd
 fi
