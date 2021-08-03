@@ -7,7 +7,9 @@ RefuseManualStop=true
 ConditionKernelCommandLine=!netroot
 
 PartOf=systemd-networkd.service
-Before=systemd-networkd.service
+Before=systemd-networkd.service initrd-switch-root.target
+# Switching the root filesystem terminates all running services with binaries from the initramfs, we need to finish before that happens
+Conflicts=initrd-switch-root.target
 
 [Service]
 RemainAfterExit=true
