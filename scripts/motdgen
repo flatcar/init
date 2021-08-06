@@ -24,6 +24,7 @@ fi
 
 if ! ( mount | grep -q cgroup2 ); then
 	echo -e "\e[33mWarning\e[39m: using legacy cgroups" >> /run/flatcar/motd
+	echo -e "Read more: https://kinvolk.io/docs/flatcar-container-linux/latest/container-runtimes/switching-to-unified-cgroups" >> /run/flatcar/motd
 fi
 
 if [[ "${GROUP}" =~ "lts" ]]; then
