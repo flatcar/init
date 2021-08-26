@@ -5,6 +5,12 @@
 
 set -e -o pipefail
 
+if command -v lbzip2 > /dev/null; then
+    BZIP_UTIL=lbzip2
+else
+    BZIP_UTIL=bzip2
+fi
+
 error_output() {
     echo "Error: return code $? from $BASH_COMMAND" >&2
 }
@@ -515,7 +521,7 @@ function install_from_file() {
 
     echo "Writing ${IMAGE_FILE}..."
     if [[ "${IMAGE_FILE}" =~ \.bz2$ ]]; then
-        bzip2 -cd "${IMAGE_FILE}" | write_to_disk
+        ${BZIP_UTIL} -cd "${IMAGE_FILE}" | write_to_disk
     else
         write_to_disk < "${IMAGE_FILE}"
     fi
@@ -604,7 +610,7 @@ function install_from_url() {
     prep_url
     echo "Downloading, writing and verifying ${IMAGE_NAME}..."
     if ! wget ${WGET_ARGS} --no-verbose -O - "${IMAGE_URL}" \
-        | tee >(bzip2 -cd >&3) \
+        | tee >(${BZIP_UTIL} -cd >&3) \
         | gpg --batch --trusted-key "${GPG_LONG_ID}" \
             --verify "${WORKDIR}/${SIG_NAME}" -
     then
