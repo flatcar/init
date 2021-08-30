@@ -70,6 +70,9 @@ for f in /usr/share/oem/oem-release /etc/oem-release; do
         eval "$(sed -e 's/^/OEM_/' $f)"
     fi
 done
+if [[ "${OEM_ID}" = "qemu" ]] || [[ "${OEM_ID}" = "qemu_uefi" ]]; then
+    OEM_ID=""
+fi
 
 USAGE="Usage: $0 {{-d <device>}|-s} [options]
 Options:
