@@ -656,7 +656,7 @@ function write_ignition() if [[ -n "${IGNITION}" ]]; then
     local OEM_DEV=$(blkid -t "LABEL=OEM" -o device "${DEVICE}"*)
 
     mkdir -p "${WORKDIR}/oemfs"
-    mount "${OEM_DEV}" "${WORKDIR}/oemfs"
+    mount "${OEM_DEV}" "${WORKDIR}/oemfs" || { btrfstune -f -u "${OEM_DEV}" ; mount "${OEM_DEV}" "${WORKDIR}/oemfs" ; }
     trap 'umount "${WORKDIR}/oemfs"' RETURN
 
     echo "Installing Ignition config ${IGNITION}..."
