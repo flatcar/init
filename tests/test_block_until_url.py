@@ -1,9 +1,9 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python3
 # Copyright (c) 2013 The CoreOS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import BaseHTTPServer
+import http.server
 import os
 import select
 import signal
@@ -11,6 +11,8 @@ import subprocess
 import threading
 import time
 import unittest
+
+from http import HTTPStatus
 
 script_path = os.path.abspath('%s/../../bin/block-until-url' % __file__)
 
@@ -22,32 +24,33 @@ class UsageTestCase(unittest.TestCase):
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
         out, err = proc.communicate()
-        self.assertEquals(proc.returncode, 1)
-        self.assertEquals(out, '')
-        self.assertIn('invalid url', err)
+        self.assertEqual(proc.returncode, 1)
+        self.assertEqual(out, b'')
+        self.assertIn(b'invalid url', err)
 
     def test_invalid_url(self):
         proc = subprocess.Popen([script_path, 'fooshizzle'],
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
         out, err = proc.communicate()
-        self.assertEquals(proc.returncode, 1)
-        self.assertEquals(out, '')
-        self.assertIn('invalid url', err)
+        self.assertEqual(proc.returncode, 1)
+        self.assertEqual(out, b'')
+        self.assertIn(b'invalid url', err)
 
 
-class TestRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class TestRequestHandler(http.server.BaseHTTPRequestHandler):
 
     def send_test_data(self):
         if self.path == '/ok':
-            ok_data = 'OK!\n'
-            self.send_response(200)
+            ok_data = b'OK!\n'
+            self.send_response(HTTPStatus.OK)
             self.send_header('Content-type', 'text/plain')
             self.send_header('Content-Length', str(len(ok_data)))
+            self.end_headers()
             if self.command != 'HEAD':
                 self.wfile.write(ok_data)
         elif self.path == '/404':
-            self.send_error(404)
+            self.send_error(HTTPStatus.NOT_FOUND)
         else:
             # send nothing so curl fails
             pass
@@ -65,33 +68,34 @@ class TestRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 class HttpTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.server = BaseHTTPServer.HTTPServer(
+        self.server = http.server.HTTPServer(
                 ('localhost', 0), TestRequestHandler)
-        self.server_url = 'http://%s:%s' % self.server.server_address
-        server_thread = threading.Thread(target=self.server.serve_forever)
-        server_thread.daemon = True
-        server_thread.start()
+        self.server_url = 'http://%s:%s' % (self.server.server_name, self.server.server_port)
+        self.server_thread = threading.Thread(target=self.server.serve_forever)
+        self.server_thread.start()
 
     def tearDown(self):
         self.server.shutdown()
+        self.server_thread.join()
+        self.server.server_close()
 
     def test_quick_ok(self):
         proc = subprocess.Popen([script_path, '%s/ok' % self.server_url],
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
         out, err = proc.communicate()
-        self.assertEquals(proc.returncode, 0)
-        self.assertEquals(out, '')
-        self.assertEquals(err, '')
+        self.assertEqual(proc.returncode, 0)
+        self.assertEqual(out, b'')
+        self.assertEqual(err, b'')
 
     def test_quick_404(self):
         proc = subprocess.Popen([script_path, '%s/404' % self.server_url],
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
         out, err = proc.communicate()
-        self.assertEquals(proc.returncode, 0)
-        self.assertEquals(out, '')
-        self.assertEquals(err, '')
+        self.assertEqual(proc.returncode, 0)
+        self.assertEqual(out, b'')
+        self.assertEqual(err, b'')
 
     def test_timeout(self):
         proc = subprocess.Popen([script_path, '%s/bogus' % self.server_url],
@@ -104,9 +108,9 @@ class HttpTestCase(unittest.TestCase):
             self.assertIs(proc.poll(), None, 'script terminated early!')
         proc.terminate()
         out, err = proc.communicate()
-        self.assertEquals(proc.returncode, -signal.SIGTERM)
-        self.assertEquals(out, '')
-        self.assertEquals(err, '')
+        self.assertEqual(proc.returncode, -signal.SIGTERM)
+        self.assertEqual(out, b'')
+        self.assertEqual(err, b'')
 
 
 if __name__ == '__main__':
