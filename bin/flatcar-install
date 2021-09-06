@@ -4,12 +4,30 @@
 # found in the LICENSE file.
 
 set -e -o pipefail
-
+flag=0
 if command -v lbzip2 > /dev/null; then
     BZIP_UTIL=lbzip2
+    flag=1
 else
     BZIP_UTIL=bzip2
 fi
+
+if flag == 0; then
+    command -v bzip2 > /dev/null || { echo "error: command 'wget' not found" > /dev/stderr ; exit 1 ; }
+fi
+
+command -v mkfifo > /dev/null || { echo "error: command 'mkfifo' not found" > /dev/stderr ; exit 1 ; }
+command -v mkdir > /dev/null || { echo "error: command 'mkdir' not found" > /dev/stderr ; exit 1 ; }
+command -v ls > /dev/null || { echo "error: command 'ls' not found" > /dev/stderr ; exit 1 ; }
+command -v mount > /dev/null || { echo "error: command 'mount' not found" > /dev/stderr ; exit 1 ; }
+command -v grep > /dev/null || { echo "error: command 'grep' not found" > /dev/stderr ; exit 1 ; }
+command -v lsblk > /dev/null || { echo "error: command 'lsblk' not found" > /dev/stderr ; exit 1 ; }
+command -v cp > /dev/null || {echo "error: command 'cp' not found" > /dev/stderr ; exit 1 ; }
+command -v dd > /dev/null || {echo "error: command 'dd' not found" > /dev/stderr ; exit 1 ; }
+command -v rm > /dev/null || {echo "error: command 'rm' not found" > /dev/stderr ; exit 1 ; }
+command -v tee > /dev/null || {echo "error: command 'tee' not found" > /dev/stderr ; exit 1 ; }
+command -v gpg > /dev/null || {echo "error: command 'gpg' not found" > /dev/stderr ; exit 1 ; }
+command -v gpg2 > /dev/null || {echo "error: command 'gpg2' not found" > /dev/stderr ; exit 1 ; }
 
 error_output() {
     echo "Error: return code $? from $BASH_COMMAND" >&2
