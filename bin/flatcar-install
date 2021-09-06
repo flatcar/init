@@ -16,6 +16,7 @@ if flag == 0; then
     command -v bzip2 > /dev/null || { echo "error: command 'bzip2' not found" > /dev/stderr ; exit 1 ; }
 fi
 
+command -v wget > /dev/null || { echo "error: command 'wget' not found" > /dev/stderr ; exit 1 ; }
 command -v mkfifo > /dev/null || { echo "error: command 'mkfifo' not found" > /dev/stderr ; exit 1 ; }
 command -v mkdir > /dev/null || { echo "error: command 'mkdir' not found" > /dev/stderr ; exit 1 ; }
 command -v ls > /dev/null || { echo "error: command 'ls' not found" > /dev/stderr ; exit 1 ; }
