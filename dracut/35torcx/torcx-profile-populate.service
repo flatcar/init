@@ -22,6 +22,9 @@ After=systemd-resolved.service
 # Runs before initramfs provisioning is completed.
 Before=ignition-quench.service initrd-parse-etc.service
 
+OnFailure=emergency.target
+OnFailureJobMode=isolate
+
 [Install]
 RequiredBy=ignition-quench.service
 

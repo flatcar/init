@@ -21,6 +21,9 @@ After=systemd-networkd.service
 Wants=systemd-resolved.service
 After=systemd-resolved.service
 
+OnFailure=emergency.target
+OnFailureJobMode=isolate
+
 [Service]
 Type=oneshot
 EnvironmentFile=/run/ignition.env
