@@ -96,6 +96,9 @@ Before=local-fs-pre.target
 ${nopxe:+Requires=dev-disk-by\x2dlabel-OEM.device
 After=dev-disk-by\x2dlabel-OEM.device}
 
+OnFailure=emergency.target
+OnFailureJobMode=isolate
+
 [Service]
 Type=oneshot
 ExecStart=/usr/sbin/ignition-setup ${nopxe:+normal} ${pxe:+pxe}
