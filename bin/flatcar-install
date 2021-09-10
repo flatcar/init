@@ -5,11 +5,21 @@
 
 set -e -o pipefail
 
-if command -v lbzip2 > /dev/null; then
+function ensure_tool() {
+    local tool="${1}"
+    command -v "${tool}" >/dev/null || { echo "error: command '${tool}' not found" >&2 ; exit 1; }
+}
+
+if command -v lbzip2 >/dev/null; then
     BZIP_UTIL=lbzip2
 else
     BZIP_UTIL=bzip2
+    ensure_tool "${BZIP_UTIL}"
 fi
+
+toolset=( blockdev btrfstune cp cut dd gawk gpg grep head ls lsblk mkdir mkfifo mktemp mount rm sed sort tee udevadm wget wipefs ) 
+
+for t in "${toolset[@]}"; do ensure_tool "${t}"; done
 
 error_output() {
     echo "Error: return code $? from $BASH_COMMAND" >&2
@@ -533,10 +543,6 @@ function install_from_file() {
 }
 
 function prep_url(){
-    # Ensure that required executables exist before proceeding
-    type -P wget >/dev/null || { echo 'Missing wget!' >&2 ; exit 1 ; }
-    type -P gpg >/dev/null || { echo 'Missing gpg!' >&2 ; exit 1 ; }
-
     IMAGE_NAME="flatcar_production_image.bin.bz2"
     if [[ -n "${OEM_ID}" ]]; then
         IMAGE_NAME="flatcar_production_${OEM_ID}_image.bin.bz2"
@@ -682,4 +688,4 @@ else
 fi
 
 rm -rf "${WORKDIR}"
-trap - EXIT
+trap - EXIT 
