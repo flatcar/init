@@ -20,7 +20,8 @@ install() {
         mkfs.xfs \
         mkfs.vfat \
         mkswap \
-        nvme
+        nvme \
+        wipefs
 
     inst_script "$udevdir/cloud_aws_ebs_nvme_id" \
         "/usr/lib/udev/cloud_aws_ebs_nvme_id"
