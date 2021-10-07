@@ -79,7 +79,7 @@ for p in $(getargs ip=); do
     [ -n "$mtu" ] && echo "MTUBytes=$mtu" >> $_net_file
     echo '[Network]' >> $_net_file
     [ "x$autoconf" = xoff -o "x$autoconf" = xnone ] &&
-        echo DHCP=no >> $_net_file || echo DHCP=yes >> $_net_file
+        echo DHCP=no >> $_net_file || echo -e "DHCP=yes\nIPv6AcceptRA=true" >> $_net_file
     [ -n "$gw" ] && echo "Gateway=$gw" >> $_net_file
     [ -n "$dns1" ] && echo "DNS=$dns1" >> $_net_file
     [ -n "$dns2" ] && echo "DNS=$dns2" >> $_net_file
