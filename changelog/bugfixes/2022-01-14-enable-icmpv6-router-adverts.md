@@ -1,0 +1,1 @@
+- network: Enable the ICMPv6 RAs to fix IPv6 address assignment ([PR#51](https://github.com/flatcar-linux/init/pull/51))
