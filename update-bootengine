@@ -33,7 +33,7 @@ DRACUT_ARGS=(
     --omit lvm
     --omit multipath
     --omit network
-    -a iscsi
+    --add iscsi
     )
 
 SETUP_MOUNTS=
