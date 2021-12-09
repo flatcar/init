@@ -1,0 +1,7 @@
+# Exclude Kubernetes Kubenet CNI bridge from DHCP by default
+
+[Match]
+Name=cbr0
+
+[Link]
+Unmanaged=yes
