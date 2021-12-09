@@ -1,0 +1,1 @@
+- Accept temporarily ssh-rsa in sshd_config for openssh 8.8 ([PR#54](https://github.com/flatcar-linux/init/pull/54))
