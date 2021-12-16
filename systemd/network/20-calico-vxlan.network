@@ -1,0 +1,7 @@
+# Exclude calico vxlan devices from DHCP by default
+
+[Match]
+Name=vxlan.calico
+
+[Link]
+Unmanaged=yes
