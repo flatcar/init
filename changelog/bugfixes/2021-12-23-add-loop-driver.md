@@ -1,0 +1,1 @@
+- Make dracut explicitly install the loop kernel module to fix booting issues with Kernel 5.15. ([PR#32](https://github.com/flatcar-linux/bootengine/pull/32))
