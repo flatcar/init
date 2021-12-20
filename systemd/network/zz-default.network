@@ -4,7 +4,8 @@ KeepConfiguration=dhcp-on-stop
 
 [Match]
 Name=*
-Type=!loopback
+Type=!loopback !dummy !bridge !tunnel !vxlan
+Driver=!veth
 
 [DHCP]
 UseMTU=true
