@@ -40,7 +40,8 @@ _prompt_for_timeout() {
         _wait_for_journalctl_to_stop
 
         # Print Ignition logs
-        cat <<EOF -------------------------------------------------------------------------------
+        cat <<EOF
+-------------------------------------------------------------------------------
 Ignition has failed. Please ensure your config is valid.
 A CLI validation tool for this called ignition-validate can be downloaded from GitHub:
     https://github.com/coreos/ignition/releases
