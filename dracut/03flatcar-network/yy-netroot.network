@@ -5,6 +5,7 @@ KernelCommandLine=netroot
 DHCP=yes
 # Root is on the network, it can't go down at switch-root
 KeepConfiguration=yes
+IPv6AcceptRA=true
 
 [DHCP]
 UseMTU=true

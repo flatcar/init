@@ -4,6 +4,7 @@ Type=!loopback
 
 [Network]
 DHCP=yes
+IPv6AcceptRA=true
 
 [DHCP]
 UseMTU=true
