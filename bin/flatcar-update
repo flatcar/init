@@ -90,7 +90,7 @@ if [ -d "/etc/coreos" ]; then
   ln -s flatcar /etc/coreos
 fi
 
-HARDCODED_GROUP=$(grep -m 1 -o '^GROUP=.*' /etc/flatcar/update.conf || true)
+HARDCODED_GROUP=$(grep -m 1 -o '^GROUP=.*' /etc/flatcar/update.conf 2> /dev/null || true)
 if [ "${HARDCODED_GROUP}" != "" ]; then
   echo "Warning: found hardcoded ${HARDCODED_GROUP} in /etc/flatcar/update.conf - make sure it fits the release channel you want to follow" > /dev/stderr
 fi
