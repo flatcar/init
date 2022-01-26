@@ -71,7 +71,7 @@ if [ "${FORCE_DEV_KEY}" = "1" ] && [ "${FORCE_FLATCAR_KEY}" = "1" ]; then
   echo "Error: must only specify one of --force-dev-key or --force-flatcar-key" > /dev/stderr ; exit 1
 fi
 
-[ "$USER" = "root" ] || { echo "Need to be root: sudo $0 $opts" > /dev/stderr ; exit 1 ; }
+[ "$EUID" = "0" ] || { echo "Need to be root: sudo $0 $opts" > /dev/stderr ; exit 1 ; }
 
 if mount | grep -q /usr/share/update_engine/update-payload-key.pub.pem; then
   echo "Warning: found a bind mount on /usr/share/update_engine/update-payload-key.pub.pem (will only unmount it if --force-dev-key|--force-flatcar-key is set)"
