@@ -11,4 +11,6 @@ install() {
         "${systemdsystemunitdir}/initrd-switch-root.service.d/override.conf"
     inst_simple "${moddir}/initrd-parse-etc-override.conf" \
         "${systemdsystemunitdir}/initrd-parse-etc.service.d/override.conf"
+    inst_simple "${moddir}/nocgroup.conf" \
+        "/etc/systemd/system.conf.d/nocgroup.conf"
 }
