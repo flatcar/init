@@ -1,0 +1,13 @@
+[Unit]
+Description=Enable cloudinit
+
+[Service]
+Type=oneshot
+StandardInput=file:/etc/.ignition-result.json
+ExecCondition=/usr/bin/jq -e '.userConfigProvided == false'
+ExecCondition=/usr/bin/jq -e '.provisioningBootID | gsub(\"-\"; \"\") | . == $id' --arg id %b
+ExecStart=/usr/bin/systemctl enable --now oem-cloudinit.service
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
