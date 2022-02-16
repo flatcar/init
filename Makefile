@@ -27,9 +27,6 @@ install:
 	install -m 755 sbin/* $(DESTDIR)/usr/sbin
 	ln -sf flatcar-install $(DESTDIR)/usr/bin/coreos-install
 	install -m 755 scripts/* $(DESTDIR)/usr/lib/flatcar
-	install -m 644 systemd/network/* $(DESTDIR)/usr/lib/systemd/network
-	install -m 755 systemd/system-generators/* \
-		$(DESTDIR)/usr/lib/systemd/system-generators
 	install -m 644 udev/rules.d/* $(DESTDIR)/lib/udev/rules.d
 	install -m 755 udev/bin/* $(DESTDIR)/lib/udev
 	install -m 644 configs/editor.sh $(DESTDIR)/etc/env.d/99editor
@@ -37,7 +34,8 @@ install:
 	install -m 600 configs/sshd_config $(DESTDIR)/usr/share/ssh/
 	install -m 644 configs/ssh_config $(DESTDIR)/usr/share/ssh/
 	install -m 644 configs/tmpfiles.d/* $(DESTDIR)/usr/lib/tmpfiles.d/
-	cp -a systemd/system/* $(DESTDIR)/usr/lib/systemd/system
+	cp -a systemd/* $(DESTDIR)/usr/lib/systemd/
+	chmod 755 $(DESTDIR)/usr/lib/systemd/system-generators/*
 	ln -sf ../run/issue $(DESTDIR)/etc/issue
 	ln -sf flatcar $(DESTDIR)/usr/lib/coreos
 	ln -sf flatcar $(DESTDIR)/usr/share/coreos
