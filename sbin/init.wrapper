@@ -1,0 +1,22 @@
+#!/bin/bash
+
+echo "(flatcar) runtime switch to legacy cgroups"
+
+CTRL_FILE=/sys/fs/cgroup/cgroup.subtree_control
+if [[ -f "${CTRL_FILE}" ]]; then
+  find /sys/fs/cgroup -type d -delete 2>/dev/null
+  while read ctrl; do
+    echo "-${ctrl}" >"${CTRL_FILE}"
+  done <"${CTRL_FILE}"
+fi
+umount /sys/fs/cgroup
+
+mkdir -p /tmp
+read cmdline </proc/cmdline
+printf "%s %s\n" "$cmdline" "systemd.unified_cgroup_hierarchy=0 systemd.legacy_systemd_cgroup_controller=1" >/tmp/cmdline
+chmod 0444 /tmp/cmdline
+mount -o bind,ro -t none /tmp/cmdline /proc/cmdline
+rm /tmp/cmdline
+
+init=$(readlink -f /usr/sbin/init)
+exec $init --switched-root --system
