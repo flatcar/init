@@ -4,10 +4,25 @@ echo "(flatcar) runtime switch to legacy cgroups"
 
 CTRL_FILE=/sys/fs/cgroup/cgroup.subtree_control
 if [[ -f "${CTRL_FILE}" ]]; then
-  find /sys/fs/cgroup -type d -delete 2>/dev/null
+  find /sys/fs/cgroup/*/ -name cgroup.procs -exec grep . {} \; | \
+  while read pid; do
+    echo "$pid" >/sys/fs/cgroup/cgroup.procs 2>/dev/null
+  done
+  find /sys/fs/cgroup/*/ -type d -delete 2>/dev/null
+  dump=0
   while read ctrl; do
-    echo "-${ctrl}" >"${CTRL_FILE}"
+    if ! echo "-${ctrl}" >"${CTRL_FILE}" ; then
+      dump=1
+    fi
   done <"${CTRL_FILE}"
+  if [[ "${dump}" -eq  1 ]]; then
+    echo "failed to unbind controllers; debug dump"
+    echo "---"
+    ps faux
+    find  /sys/fs/cgroup/ -name pids.current -exec grep -Hn . {} \;
+    find  /sys/fs/cgroup/ -name cgroup.procs -exec grep -Hn . {} \;
+    echo "---"
+  fi
 fi
 umount /sys/fs/cgroup
 
