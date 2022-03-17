@@ -14,6 +14,7 @@ install:
 	install -m 755 -d \
 		$(DESTDIR)/lib/udev/rules.d \
 		$(DESTDIR)/usr/bin \
+		$(DESTDIR)/usr/sbin \
 		$(DESTDIR)/usr/lib/flatcar \
 		$(DESTDIR)/usr/lib/systemd/system \
 		$(DESTDIR)/usr/lib/systemd/network \
@@ -23,6 +24,7 @@ install:
 		$(DESTDIR)/usr/share/logrotate \
 		$(DESTDIR)/usr/share/ssh
 	install -m 755 bin/* $(DESTDIR)/usr/bin
+	install -m 755 sbin/* $(DESTDIR)/usr/sbin
 	ln -sf flatcar-install $(DESTDIR)/usr/bin/coreos-install
 	install -m 755 scripts/* $(DESTDIR)/usr/lib/flatcar
 	install -m 644 systemd/network/* $(DESTDIR)/usr/lib/systemd/network
