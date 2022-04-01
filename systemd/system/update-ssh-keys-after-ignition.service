@@ -1,0 +1,13 @@
+[Unit]
+Description=Run update-ssh-keys once after Ignition
+
+[Service]
+Type=oneshot
+StandardInput=file:/etc/.ignition-result.json
+ExecCondition=/usr/bin/jq -e '.userConfigProvided == true'
+ExecCondition=/usr/bin/jq -e '.provisioningBootID | gsub(\"-\"; \"\") | . == $id' --arg id %b
+ExecStart=/bin/bash -c 'ret=0; for nameandhomedir in $(cut -d : -f 1,6 /etc/passwd); do name=$(echo "$nameandhomedir"| cut -d : -f 1); homedir=$(echo "$nameandhomedir"| cut -d : -f 2); if [ -d "$homedir"/.ssh/authorized_keys.d ]; then update-ssh-keys -u "$name" || ret=1; fi; done; exit $ret'
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
