@@ -4,7 +4,7 @@
 # The old name ens4v1 was hardcoded in a udev rule which did not
 # work anymore.
 [Match]
-Driver=virtio_net
+Driver=virtio_net gve
 KernelCommandLine=flatcar.oem.id=gce
 [Link]
 NamePolicy=kernel database onboard
