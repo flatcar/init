@@ -2,6 +2,12 @@
 BindsTo=systemd-sysext.service
 After=systemd-sysext.service
 DefaultDependencies=no
+# Keep in sync with systemd-sysext.service
+ConditionDirectoryNotEmpty=|/etc/extensions
+ConditionDirectoryNotEmpty=|/run/extensions
+ConditionDirectoryNotEmpty=|/var/lib/extensions
+ConditionDirectoryNotEmpty=|/usr/local/lib/extensions
+ConditionDirectoryNotEmpty=|/usr/lib/extensions
 [Service]
 Type=oneshot
 RemainAfterExit=yes
