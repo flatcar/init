@@ -14,3 +14,4 @@ What=/dev/disk/by-label/OEM
 Where=/usr/share/oem
 Options=nodev
 Type=auto
+LazyUnmount=yes
