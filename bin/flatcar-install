@@ -93,7 +93,7 @@ Options:
                 block devices by their major numbers. E.g., -e 7 to exclude loop devices
                 or -I 8,259 for certain disk types. Read more about the numbers here:
                 https://www.kernel.org/doc/Documentation/admin-guide/devices.txt.
-    -V VERSION  Version to install (e.g. current) [default: ${VERSION_ID}].
+    -V VERSION  Version to install (e.g. current, or current-2022 for the LTS 2022 stream) [default: ${VERSION_ID}].
     -B BOARD    Flatcar Container Linux board to use [default: ${BOARD}].
     -C CHANNEL  Release channel to use (e.g. beta) [default: ${CHANNEL_ID}].
     -I|e <M,..> EXPERIMENTAL (used with -s): List of major device numbers to in-/exclude
