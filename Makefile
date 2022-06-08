@@ -21,7 +21,8 @@ install:
 		$(DESTDIR)/usr/lib/systemd/system-generators \
 		$(DESTDIR)/usr/lib/tmpfiles.d \
 		$(DESTDIR)/etc/env.d \
-		$(DESTDIR)/usr/share/ssh
+		$(DESTDIR)/usr/share/ssh \
+		$(DESTDIR)/usr/lib/modules-load.d
 	install -m 755 bin/* $(DESTDIR)/usr/bin
 	install -m 755 sbin/* $(DESTDIR)/usr/sbin
 	ln -sf flatcar-install $(DESTDIR)/usr/bin/coreos-install
@@ -32,6 +33,7 @@ install:
 	install -m 644 udev/rules.d/* $(DESTDIR)/lib/udev/rules.d
 	install -m 755 udev/bin/* $(DESTDIR)/lib/udev
 	install -m 644 configs/editor.sh $(DESTDIR)/etc/env.d/99editor
+	install -m 644 configs/modules-load.d/* $(DESTDIR)/usr/lib/modules-load.d/
 	install -m 600 configs/sshd_config $(DESTDIR)/usr/share/ssh/
 	install -m 644 configs/ssh_config $(DESTDIR)/usr/share/ssh/
 	install -m 644 configs/tmpfiles.d/* $(DESTDIR)/usr/lib/tmpfiles.d/
