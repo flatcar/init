@@ -105,6 +105,7 @@ Options:
     -k KEYFILE  Override default GPG key for verifying image signature.
     -f IMAGE    Install unverified local image file to disk instead of fetching.
     -n          Copy generated network units to the root partition.
+    -u          Create UEFI boot entry
     -y          Dry-run.  Run some checks and print option settings.
     -v          Super verbose, for debugging.
     -h          This ;-).
@@ -395,10 +396,11 @@ CLOUDINIT=
 IMAGE_FILE=
 KEYFILE=
 VERSION_SUMMARY='Flatcar Container Linux'
+CREATE_UEFI=
 
 WGET_ARGS="--tries 10 --timeout=20 --retry-connrefused"
 
-while getopts "V:B:C:DI:d:o:c:e:i:t:b:k:f:nsyvh" OPTION
+while getopts "V:B:C:DI:d:o:c:e:i:t:b:k:f:nusyvh" OPTION
 do
     case $OPTION in
         V) VERSION_ID="$OPTARG"; VERSION_SPECIFIED=1 ;;
@@ -416,6 +418,7 @@ do
         k) KEYFILE="$OPTARG" ;;
         f) IMAGE_FILE="$OPTARG" ;;
         n) COPY_NET=1;;
+        u) CREATE_UEFI=1;;
         s) INSTALL_TO_SMALLEST=1 ;;
         y) DRY_RUN=1 ;;
         v) set -x ;;
@@ -669,6 +672,15 @@ function write_ignition() if [[ -n "${IGNITION}" ]]; then
     cp "${IGNITION}" "${WORKDIR}/oemfs/config.ign"
 fi
 
+function create_uefi() {
+    ensure_tool "efibootmgr"
+    local EFI_APP="bootx64.efi"
+    if [[ "${BOARD}" = "arm64-usr" ]]; then
+        EFI_APP="bootaa64.efi"
+    fi
+    efibootmgr -c -d "${DEVICE}" -l "\\efi\\boot\\${EFI_APP}" -L "Flatcar Container Linux ${CHANNEL_ID}"
+}
+
 WORKDIR=$(mktemp --tmpdir -d flatcar-install.XXXXXXXXXX)
 trap 'error_output ; is_modified && wipefs --all --backup "${DEVICE}" ; rm -rf "${WORKDIR}"' EXIT
 
@@ -684,6 +696,9 @@ else
     wait_for_disk
     write_cloudinit
     write_ignition
+    if [[ -n "${CREATE_UEFI}" ]]; then
+        create_uefi
+    fi
     echo "Success! ${VERSION_SUMMARY} is installed on ${DEVICE}"
 fi
 
