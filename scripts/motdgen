@@ -27,14 +27,8 @@ if ! ( mount | grep -q cgroup2 ); then
 	echo -e "Read more: https://kinvolk.io/docs/flatcar-container-linux/latest/container-runtimes/switching-to-unified-cgroups" >> /run/flatcar/motd
 fi
 
-if [[ "${GROUP}" =~ "lts" ]]; then
-	echo "FCL LTS documentation: https://kinvolk.io/fcl-lts-docs" >> /run/flatcar/motd
-fi
-if [[ "${GROUP}" =~ "lts" ]] && { [[ "${DOWNLOAD_USER}" = "" ]] || [[ "${DOWNLOAD_PASSWORD}" = "" ]] ; }; then
-	echo "/etc/flatcar/update.conf: DOWNLOAD_USER and DOWNLOAD_PASSWORD are missing to download LTS updates." >> /run/flatcar/motd
-	echo "Documentation for update.conf: https://kinvolk.io/docs/flatcar-container-linux/latest/clusters/management/update-conf" >> /run/flatcar/motd
-fi
 if [[ "${GROUP}" = "lts" ]] && [[ "${SERVER}" = "https://public.update.flatcar-linux.net/v1/update/" ]]; then
 	echo -n "/etc/flatcar/update.conf: GROUP=lts on the public update server may switch to a newer LTS stream, " >> /run/flatcar/motd
-	echo "use GROUP=lts-STREAM or your own update server with a managed 'lts' group to stick to one stream." >> /run/flatcar/motd
+	echo "use GROUP=lts-STREAM or your own update server with a managed 'lts' group to stick to one stream (e.g., 2021) and opt-out of automatic major version updates." >> /run/flatcar/motd
+	echo "Read more: https://www.flatcar.org/docs/latest/setup/releases/switching-channels/#freezing-an-lts-stream" >> /run/flatcar/motd
 fi
