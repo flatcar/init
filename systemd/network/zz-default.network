@@ -5,7 +5,7 @@ IPv6AcceptRA=true
 
 [Match]
 Name=*
-Type=!loopback !dummy !bridge !tunnel !vxlan
+Type=!loopback !dummy !bridge !tunnel !vxlan !wireguard
 Driver=!veth
 
 [DHCP]
