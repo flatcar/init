@@ -1,5 +1,7 @@
 [Match]
 Virtualization=vmware
+Type=!loopback dummy bridge tunnel vxlan wireguard
+Driver=!veth
 
 [Network]
 DHCP=yes
