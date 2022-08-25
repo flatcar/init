@@ -2,7 +2,7 @@
 set -euo pipefail
 
 opts=$(getopt --name "$(basename "${0}")" --options 'hV:P:DFA' \
-       --longoptions 'help,to-version:,to-payload:,force-dev-key,force-flatcar-key,disable-afterwards' -- "${@}")
+       --longoptions 'help,to-version:,to-payload:,listen-port-1:,listen-port-2:,force-dev-key,force-flatcar-key,disable-afterwards' -- "${@}")
 eval set -- "${opts}"
 
 USER_PAYLOAD=
@@ -11,22 +11,26 @@ VERSION=
 FORCE_DEV_KEY=
 FORCE_FLATCAR_KEY=
 DISABLE_AFTERWARDS=
+LISTEN_PORT_1=9090
+LISTEN_PORT_2=9091
 
 while true; do
   case "$1" in
   -h|--help)
-    echo "Usage: $(basename "${0}") --to-version VERSION [--to-payload FILENAME] [--force-dev-key|--force-flatcar-key|--disable-afterwards]"
+    echo "Usage: $(basename "${0}") --to-version VERSION [--to-payload FILENAME] [--listen-port-1 LISTEN_PORT_1] [--listen-port-2 LISTEN_PORT_2] [--force-dev-key|--force-flatcar-key|--disable-afterwards|]"
     echo "  Updates Flatcar Container Linux through a temporary local update service on localhost."
     echo "  The update-engine service will be unmasked (to disable updates again use -A)."
     echo "  The reboot should be done after applying the update, either manually or through your reboot manager (check locksmithd/FLUO)."
     echo "  An error will be reported if a previously applied update wasn't booted into yet (you may discard it with 'update_engine_client -reset_status')."
     echo "  Warning: If you jump between channels, delete any GROUP configured in /etc/flatcar/update.conf for the new defaults to apply."
     echo "Options:"
-    echo "  -V, --to-version <VERSION>	Updates to the version, by default using the matching release from update.release.flatcar-linux.net"
-    echo "  -P, --to-payload <FILENAME>	Updates to the given update payload file instead of downloading it"
-    echo "  -D, --force-dev-key		Bind-mounts the dev key over /usr/share/update_engine/update-payload-key.pub.pem"
-    echo "  -F, --force-flatcar-key	Bind-mounts the Flatcar release key over /usr/share/update_engine/update-payload-key.pub.pem"
-    echo "  -A, --disable-afterwards	Writes SERVER=disabled to /etc/flatcar/update.conf when done (this overwrites any custom SERVER)"
+    echo "  -V, --to-version <VERSION>	  Updates to the version, by default using the matching release from update.release.flatcar-linux.net"
+    echo "  -P, --to-payload <FILENAME>	  Updates to the given update payload file instead of downloading it"
+    echo "  -D, --force-dev-key		  Bind-mounts the dev key over /usr/share/update_engine/update-payload-key.pub.pem"
+    echo "  -F, --force-flatcar-key	  Bind-mounts the Flatcar release key over /usr/share/update_engine/update-payload-key.pub.pem"
+    echo "  -A, --disable-afterwards	  Writes SERVER=disabled to /etc/flatcar/update.conf when done (this overwrites any custom SERVER)"
+    echo "  -L, --listen-port-1 <LISTEN_PORT_1> Overwrites standard listen port 9090"
+    echo "  -M, --listen-port-2 <LISTEN_PORT_2> Overwrites standard listen port 9091"
     echo
     echo "Example for updating to the latest Stable release and disabling automatic updates afterwards:"
     echo '  VER=$(curl -fsSL https://stable.release.flatcar-linux.net/amd64-usr/current/version.txt | grep FLATCAR_VERSION= | cut -d = -f 2)'
@@ -43,6 +47,20 @@ while true; do
     USER_PAYLOAD=1
     if [ "$PAYLOAD" = "" ]; then
       echo "Error: --to-payload must not have an empty value" > /dev/stderr ; exit 1
+    fi
+    ;;
+  -L|--listen-port-1)
+    shift
+    LISTEN_PORT_1="$1"
+    if [ "$LISTEN_PORT_1" = "" ]; then
+      echo "Error: --listen-port-1 must not have an empty value" > /dev/stderr ; exit 1
+    fi
+    ;;
+  -M|--listen-port-2)
+    shift
+    LISTEN_PORT_2="$1"    
+    if [ "$LISTEN_PORT_2" = "" ]; then
+      echo "Error: --listen-port-2 must not have an empty value" > /dev/stderr ; exit 1
     fi
     ;;
   -D|--force-dev-key)
@@ -77,11 +95,11 @@ if mount | grep -q /usr/share/update_engine/update-payload-key.pub.pem; then
   echo "Warning: found a bind mount on /usr/share/update_engine/update-payload-key.pub.pem (will only unmount it if --force-dev-key|--force-flatcar-key is set)"
 fi
 
-if ss -tan | grep -q "LISTEN.*:9090"; then
-  echo "Error: some process is using port 9090" > /dev/stderr ; exit 1
+if ss -tan | grep -q "LISTEN.*:${LISTEN_PORT_1}"; then
+  echo "Error: some process is using port ${LISTEN_PORT_1}" > /dev/stderr ; exit 1
 fi
-if ss -tan | grep -q "LISTEN.*:9091"; then
-  echo "Error: some process is using port 9091" > /dev/stderr ; exit 1
+if ss -tan | grep -q "LISTEN.*:${LISTEN_PORT_2}"; then
+  echo "Error: some process is using port ${LISTEN_PORT_2}" > /dev/stderr ; exit 1
 fi
 
 # Migrate CoreOS machines to Flatcar
@@ -107,7 +125,7 @@ touch /etc/flatcar/update.conf
 PREV_SERVER=$(grep '^SERVER=' /etc/flatcar/update.conf || true)
 sed -i "/SERVER=.*/d" /etc/flatcar/update.conf
 
-echo "SERVER=http://localhost:9090/update" >> /etc/flatcar/update.conf
+echo "SERVER=http://localhost:${LISTEN_PORT_1}/update" >> /etc/flatcar/update.conf
 BOARD=$({ grep -m 1 BOARD= /usr/share/coreos/release || true ; } | cut -d = -f 2-)
 if [ "$BOARD" = "" ]; then
   echo "Error: could not find board from /usr/share/coreos/release" > /dev/stderr ; exit 1
@@ -130,7 +148,7 @@ if [ "$PAYLOAD" = "" ]; then
   echo "When restarting after an error you may reuse it with '--to-payload $PAYLOAD'"
 fi
 
-BASE="http://localhost:9091/"
+BASE="http://localhost:${LISTEN_PORT_2}/"
 HASH=$(openssl dgst -binary -sha1 < "$PAYLOAD" | base64)
 SHA256=$(openssl dgst -binary -sha256 < "$PAYLOAD" | base64)
 SIZE=$(stat --printf='%s\n' "$PAYLOAD")
@@ -145,8 +163,8 @@ tee /tmp/response > /dev/null <<-EOF
 	</updatecheck><event status="ok"></event></app></response>
 EOF
 
-ncat --keep-open -c "echo -en 'HTTP/1.1 200 OK\ncontent-type: application/gzip\ncontent-length: $SIZE\n\n'; cat \"$PAYLOAD\"" -l 9091 &
-ncat --keep-open -c "echo -en 'HTTP/1.1 200 OK\ncontent-type: text/xml\ncontent-length: $(stat --printf='%s\n' /tmp/response)\n\n'; cat /tmp/response" -l 9090 &
+ncat --keep-open -c "echo -en 'HTTP/1.1 200 OK\ncontent-type: application/gzip\ncontent-length: $SIZE\n\n'; cat \"$PAYLOAD\"" -l $LISTEN_PORT_2 &
+ncat --keep-open -c "echo -en 'HTTP/1.1 200 OK\ncontent-type: text/xml\ncontent-length: $(stat --printf='%s\n' /tmp/response)\n\n'; cat /tmp/response" -l $LISTEN_PORT_1 &
 trap "umount /usr/share/update_engine/update-payload-key.pub.pem 2> /dev/null || true; rm -f /tmp/response ; kill 0" EXIT INT
 
 if [ "${FORCE_DEV_KEY}" = "1" ] || [ "${FORCE_FLATCAR_KEY}" = "1" ]; then
