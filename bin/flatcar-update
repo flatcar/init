@@ -17,7 +17,7 @@ LISTEN_PORT_2=9091
 while true; do
   case "$1" in
   -h|--help)
-    echo "Usage: $(basename "${0}") --to-version VERSION [--to-payload FILENAME] [--listen-port-1 LISTEN_PORT_1] [--listen-port-2 LISTEN_PORT_2] [--force-dev-key|--force-flatcar-key|--disable-afterwards|]"
+    echo "Usage: $(basename "${0}") --to-version VERSION [--to-payload FILENAME] [--listen-port-1 PORT] [--listen-port-2 PORT] [--force-dev-key|--force-flatcar-key|--disable-afterwards|]"
     echo "  Updates Flatcar Container Linux through a temporary local update service on localhost."
     echo "  The update-engine service will be unmasked (to disable updates again use -A)."
     echo "  The reboot should be done after applying the update, either manually or through your reboot manager (check locksmithd/FLUO)."
