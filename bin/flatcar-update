@@ -163,8 +163,8 @@ tee /tmp/response > /dev/null <<-EOF
 	</updatecheck><event status="ok"></event></app></response>
 EOF
 
-ncat --keep-open -c "echo -en 'HTTP/1.1 200 OK\ncontent-type: application/gzip\ncontent-length: $SIZE\n\n'; cat \"$PAYLOAD\"" -l $LISTEN_PORT_2 &
-ncat --keep-open -c "echo -en 'HTTP/1.1 200 OK\ncontent-type: text/xml\ncontent-length: $(stat --printf='%s\n' /tmp/response)\n\n'; cat /tmp/response" -l $LISTEN_PORT_1 &
+ncat --keep-open -c "echo -en 'HTTP/1.1 200 OK\ncontent-type: application/gzip\ncontent-length: $SIZE\n\n'; cat \"$PAYLOAD\"" -l "$LISTEN_PORT_2" &
+ncat --keep-open -c "echo -en 'HTTP/1.1 200 OK\ncontent-type: text/xml\ncontent-length: $(stat --printf='%s\n' /tmp/response)\n\n'; cat /tmp/response" -l "$LISTEN_PORT_1" &
 trap "umount /usr/share/update_engine/update-payload-key.pub.pem 2> /dev/null || true; rm -f /tmp/response ; kill 0" EXIT INT
 
 if [ "${FORCE_DEV_KEY}" = "1" ] || [ "${FORCE_FLATCAR_KEY}" = "1" ]; then
