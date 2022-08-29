@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-opts=$(getopt --name "$(basename "${0}")" --options 'hV:P:DFA' \
+opts=$(getopt --name "$(basename "${0}")" --options 'hV:P:L:M:DFA' \
        --longoptions 'help,to-version:,to-payload:,listen-port-1:,listen-port-2:,force-dev-key,force-flatcar-key,disable-afterwards' -- "${@}")
 eval set -- "${opts}"
 
