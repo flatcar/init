@@ -29,8 +29,8 @@ while true; do
     echo "  -D, --force-dev-key		  Bind-mounts the dev key over /usr/share/update_engine/update-payload-key.pub.pem"
     echo "  -F, --force-flatcar-key	  Bind-mounts the Flatcar release key over /usr/share/update_engine/update-payload-key.pub.pem"
     echo "  -A, --disable-afterwards	  Writes SERVER=disabled to /etc/flatcar/update.conf when done (this overwrites any custom SERVER)"
-    echo "  -L, --listen-port-1 <LISTEN_PORT_1> Overwrites standard listen port 9090"
-    echo "  -M, --listen-port-2 <LISTEN_PORT_2> Overwrites standard listen port 9091"
+    echo "  -L, --listen-port-1 <PORT> Overwrites standard listen port 9090"
+    echo "  -M, --listen-port-2 <PORT> Overwrites standard listen port 9091"
     echo
     echo "Example for updating to the latest Stable release and disabling automatic updates afterwards:"
     echo '  VER=$(curl -fsSL https://stable.release.flatcar-linux.net/amd64-usr/current/version.txt | grep FLATCAR_VERSION= | cut -d = -f 2)'
