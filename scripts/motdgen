@@ -24,7 +24,5 @@ if [[ "${GROUP}" = "lts" ]] && [[ "${SERVER}" = "https://public.update.flatcar-l
 	echo "Read more: https://www.flatcar.org/docs/latest/setup/releases/switching-channels/#freezing-an-lts-stream" >> /run/flatcar/motd
 fi
 
-if [[ "${GROUP}" = "lts" ]] && [[ "${VERSION}" == 2605* ]]; then
-	echo "The LTS stream, LTS-2021 is now deprecated. Please update to a newer LTS stream for updates." >> /run/flatcar/motd
-	echo "Read more: https://flatcar-linux.org/docs/latest/setup/releases/switching-channels/" >> /run/flatcar/motd
-fi
+echo "The LTS stream LTS-2021 is now deprecated. Please update to a newer LTS stream for updates." >> /run/flatcar/motd
+echo "Read more: https://flatcar-linux.org/docs/latest/setup/releases/switching-channels/" >> /run/flatcar/motd
