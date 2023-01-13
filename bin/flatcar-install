@@ -10,6 +10,11 @@ function ensure_tool() {
     command -v "${tool}" >/dev/null || { echo "error: command '${tool}' not found" >&2 ; exit 1; }
 }
 
+function have_tool() {
+    local tool="${1}"
+    command -v "${tool}"
+}
+
 if command -v lbzip2 >/dev/null; then
     BZIP_UTIL=lbzip2
 else
@@ -19,7 +24,16 @@ fi
 
 toolset=( blockdev btrfstune cp cut dd gawk gpg grep head ls lsblk mkdir mkfifo mktemp mount rm sed sort tee udevadm wget wipefs ) 
 
+optional_tools=( pv )
+
 for t in "${toolset[@]}"; do ensure_tool "${t}"; done
+for t in "${optional_tools[@]}"; do
+  declare -r have_"${t}"=$(have_tool "${t}")
+  h="have_${t}"
+  if [  -z "${!h}" ] ; then
+    echo "info: optional command '${t}' not found"
+  fi
+done
 
 error_output() {
     echo "Error: return code $? from $BASH_COMMAND" >&2
@@ -572,9 +586,9 @@ function install_from_file() {
 
     echo "Writing ${IMAGE_FILE}..."
     if [[ "${IMAGE_FILE}" =~ \.bz2$ ]]; then
-        ${BZIP_UTIL} -cd "${IMAGE_FILE}" | write_to_disk
+        ${have_pv:-cat} "${IMAGE_FILE}" | ${BZIP_UTIL} -cd | write_to_disk
     else
-        write_to_disk < "${IMAGE_FILE}"
+        ${have_pv:-cat} "${IMAGE_FILE}" | write_to_disk
     fi
 
     VERSION_SUMMARY+=" (from ${IMAGE_FILE})"
