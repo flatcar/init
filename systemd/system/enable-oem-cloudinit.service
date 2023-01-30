@@ -1,5 +1,6 @@
 [Unit]
 Description=Enable cloudinit
+ConditionPathExists=/etc/.ignition-result.json
 
 [Service]
 Type=oneshot
