@@ -37,8 +37,8 @@ install:
 	cp -a systemd/* $(DESTDIR)/usr/lib/systemd/
 	chmod 755 $(DESTDIR)/usr/lib/systemd/system-generators/*
 	ln -sf ../run/issue $(DESTDIR)/etc/issue
-	ln -sf flatcar $(DESTDIR)/usr/lib/coreos
-	ln -sf flatcar $(DESTDIR)/usr/share/coreos
+	ln -sfT flatcar $(DESTDIR)/usr/lib/coreos
+	ln -sfT flatcar $(DESTDIR)/usr/share/coreos
 
 install-usr: install
 
