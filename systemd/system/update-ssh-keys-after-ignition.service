@@ -1,5 +1,6 @@
 [Unit]
 Description=Run update-ssh-keys once after Ignition
+ConditionPathExists=/etc/.ignition-result.json
 
 [Service]
 Type=oneshot
