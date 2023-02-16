@@ -1,0 +1,9 @@
+# Exclude Kubernetes local node dns dummy interfaces from DHCP by default
+# https://github.com/kubernetes/dns/blob/da9249d88ca22ecdf09e25c98f3c0c572a85d34b/cmd/node-cache/main.go#L83
+
+[Match]
+Name=nodelocaldns
+Driver=dummy
+
+[Link]
+Unmanaged=yes

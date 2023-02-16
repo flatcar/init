@@ -1,0 +1,9 @@
+# Exclude Kubernetes proxy dummy interfaces from DHCP by default
+# https://github.com/kubernetes/kubernetes/blob/cd5ab497413faacae4e712b487c63c8b45c292f5/pkg/proxy/ipvs/proxier.go#L91
+
+[Match]
+Name=kube-ipvs0
+Driver=dummy
+
+[Link]
+Unmanaged=yes
