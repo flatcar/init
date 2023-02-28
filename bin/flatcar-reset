@@ -1,0 +1,148 @@
+#!/bin/bash
+set -euo pipefail
+
+# The regex path arguments for --keep-paths are treated as regular arguments
+opts=$(getopt --name "$(basename "${0}")" --options 'hF:U:KM' \
+       --longoptions 'help,ignition-file:,ignition-url:,keep-paths,keep-machine-id' -- "${@}")
+eval set -- "${opts}"
+
+KEEPMACHINEID=
+IGNITIONFILE=
+IGNITIONURL=
+HASKEEPPATHS=
+
+while true; do
+  case "$1" in
+  -h|--help)
+    echo "Usage: $(basename "${0}") [--ignition-file FILE] [--ignition-url URL] [--keep-machine-id] [--keep-paths REGEX...]"
+    echo "  Resets Flatcar Container Linux through a (selective) cleanup of the root filesystem during the next boot."
+    echo "  Paths for data to retain can be specified as regular expressions."
+    echo "  Ignition will run again, and a local or remote Ignition configuration source can also be set up."
+    echo "  A full or selective discard of the root filesystem allows to reconfigure the system while avoiding config drift."
+    echo "  The /etc/machine-id file will be deleted but it is possible to keep the machine ID by letting it be part of the kernel cmdline."
+    echo "  When paths to keep are specified, only needed paths should be used and not those set up by the old Ignition config"
+    echo "  or side effects of it, to really discard the old configuration state. When a path specified is a folder, the contents are"
+    echo "  preserved as well because MYPATH/.* is automatically appended as additonal regular expression for paths to keep."
+    echo "  To delete the contents of a folder but keep the folder itself, specify it as equivalent regular expression in the form of"
+    echo "  '^/etc/mypath', '/etc/mypath$', '/etc/mypat[h]', '/etc/(mypath)', or '(/etc/mypath)'. The used regular expression language"
+    echo "  is that of egrep. Assuming you specified '/etc/mypath', you can test which paths will be deleted with (note the '-not'):"
+    echo "    find / /etc -xdev -regextype egrep -not -regex '(/etc/mypath|/etc/mypath/.*)'"
+    echo "  You can tests which path will be kept with with (note the absence of '-not'):"
+    echo "    find / /etc -xdev -regextype egrep -regex '(/etc/mypath|/etc/mypath/.*)'"
+    echo "  Both / and /etc have to be specified because /etc is an overlay mount."
+    echo "  Meaningful examples are:"
+    echo "  - '/etc/ssh/ssh_host_.*' to preserve SSH host keys"
+    echo "  - '/var/log' to preserve system logs"
+    echo "  - '/var/lib/docker' '/var/lib/containerd' to preserve container state and images"
+    echo "Options:"
+    echo "  -F, --ignition-file <FILE>	Writes the given Ignition config JSON file to /usr/share/oem/config.ign"
+    echo "  -U, --ignition-url <URL>	Writes the given Ignition config JSON URL as kernel cmdline parameter to /usr/share/oem/grub.cfg"
+    echo "  -K, --keep-paths <REGEX>...	Writes the given regular expressions for paths to keep as combined OS reset info to /selective-os-reset"
+    echo "  -M, --keep-machine-id	Writes the current machine ID as kernel cmdline parameter to /usr/share/oem/grub.cfg to preserve it"
+    echo
+    echo "Example for selectively resetting the OS with retriggering Ignition while keeping SSH host keys, logs, and machine ID:"
+    echo "  sudo $(basename "${0}") --keep-machine-id --keep-paths '/etc/ssh/ssh_host_.*' /var/log"
+    echo "  sudo systemctl reboot"
+    exit 1
+    ;;
+  -F|--ignition-file)
+    shift
+    if [[ -n "${IGNITIONURL}" ]]; then
+        echo "Error: Can't specify both Ignition URL and Ignition file at the same time" > /dev/stderr ; exit 1
+    fi
+    IGNITIONFILE="$1"
+    ;;
+  -U|--ignition-url)
+    shift
+    if [[ -n "${IGNITIONFILE}" ]]; then
+        echo "Error: Can't specify both Ignition URL and Ignition file at the same time" > /dev/stderr ; exit 1
+    fi
+    IGNITIONURL="$1"
+    ;;
+  -K|--keep-paths)
+    HASKEEPPATHS=1
+    ;;
+  -M|--keep-machine-id)
+    KEEPMACHINEID=1
+    ;;
+  --)
+    shift
+    break;;
+  esac
+  shift
+done
+
+KEEP=("$@")
+if [ "${KEEP[*]}" != "" ] && [ "${HASKEEPPATHS}" != 1 ]; then
+  echo "Error: Found unused arguments: ${KEEP[*]}" > /dev/stderr ; exit 1
+fi
+if [ "${KEEP[*]}" = "" ]; then
+  if [ "${HASKEEPPATHS}" = 1 ]; then
+    echo "Error: No paths to keep specified for --keep-paths argument" > /dev/stderr ; exit 1
+  fi
+fi
+if [ "${HASKEEPPATHS}" = 1 ]; then
+  for ENTRY in "${KEEP[@]}"; do
+    if [[ "${ENTRY}" = './'* ]] || [[ "${ENTRY}" =~ ^[^/\\\(\{\[\$^].*$ ]]; then
+      echo "Error: Invalid path to keep, must be an absolute path or a regex for an absolute path: ${ENTRY}" > /dev/stderr ; exit 1
+    fi
+  done
+fi
+
+[ "$EUID" = "0" ] || { echo "Need to be root: sudo $0 $opts" > /dev/stderr ; exit 1 ; }
+
+if [ "${KEEPMACHINEID}" = 1 ]; then
+  MACHINEID=$(cat /etc/machine-id)
+  touch /usr/share/oem/grub.cfg
+  sed -i "s/systemd\.machine_id=[a-f0-9]*//g" /usr/share/oem/grub.cfg
+  echo "set linux_append=\"\$linux_append systemd.machine_id=${MACHINEID}\"" >> /usr/share/oem/grub.cfg
+  echo "Wrote machine ID as kernel cmdline parameter to /usr/share/oem/grub.cfg"
+else
+  if [ -e /usr/share/oem/grub.cfg ]; then
+    sed -i "s/systemd\.machine_id=[a-f0-9]*//g" /usr/share/oem/grub.cfg
+    echo "Removed any hardcoded systemd.machine_id kernel cmdline parameter in /usr/share/oem/grub.cfg"
+  fi
+fi
+if [ "${IGNITIONFILE}" != "" ]; then
+  if [ -e /usr/share/oem/grub.cfg ]; then
+    sed -i "s/ignition.config.url=[^ \"']*//g" /usr/share/oem/grub.cfg
+    echo "Removed any ignition.config.url kernel cmdline parameter in /usr/share/oem/grub.cfg"
+  fi
+  cp "${IGNITIONFILE}" /usr/share/oem/config.ign
+  echo "Wrote Ignition file /usr/share/oem/config.ign"
+fi
+if [ "${IGNITIONURL}" != "" ]; then
+  if [ -e /usr/share/oem/config.ign ]; then
+    rm /usr/share/oem/config.ign
+    echo "Removed Ignition file /usr/share/oem/config.ign"
+  fi
+  touch /usr/share/oem/grub.cfg
+  sed -i "s/ignition.config.url=[^ \"']*//g" /usr/share/oem/grub.cfg
+  echo "set linux_append=\"\$linux_append ignition.config.url=${IGNITIONURL}\"" >> /usr/share/oem/grub.cfg
+  echo "Wrote Ignition URL as kernel cmdline parameter to /usr/share/oem/grub.cfg"
+fi
+# Throw away rests of previous modifications that are now no-ops
+if [ -e /usr/share/oem/grub.cfg ]; then
+  # shellcheck disable=SC2016 # We want to literally match $linux_append
+  sed -i '/set linux_append="\$linux_append *"/d' /usr/share/oem/grub.cfg
+fi
+
+{
+  echo -n '('
+  for ENTRY in "${KEEP[@]}"; do
+    # If it ends with / we cut it away as it's optional and also won't match the paths find prints for directories
+    ENTRY="${ENTRY%/}"
+    # If this here starts with / and doesn't end with $|)|*|]|? we will generate an additional regex entry to keep not only the path but also its contents
+    if [[ "${ENTRY}" = /* ]] && [[ "${ENTRY}" != *'$' ]] && [[ "${ENTRY}" != *')' ]] && [[ "${ENTRY}" != *'*' ]] && [[ "${ENTRY}" != *']' ]] && [[ "${ENTRY}" != *'?' ]]; then
+      echo -n "${ENTRY}/.*|"
+    fi
+    echo -n "${ENTRY}|"
+  done
+  echo '/selective-os-reset)'
+  # If nothing should be kept but we need to have at least one entry,
+  # therefore, use the flag file itself as entry which will be removed anyway
+} > /selective-os-reset
+
+touch /boot/flatcar/first_boot
+
+echo "Prepared /selective-os-reset and /boot/flatcar/first_boot, you can reboot now"
