@@ -2,14 +2,20 @@
 set -euo pipefail
 
 # The regex path arguments for --keep-paths are treated as regular arguments
-opts=$(getopt --name "$(basename "${0}")" --options 'hF:U:KM' \
-       --longoptions 'help,ignition-file:,ignition-url:,keep-paths,keep-machine-id' -- "${@}")
+opts=$(getopt --name "$(basename "${0}")" --options 'hF:U:KMBSPWDR' \
+       --longoptions 'help,ignition-file:,ignition-url:,keep-paths,keep-machine-id,backup,stop,preview-delete,preview-keep,delete-backup,restore-backup' -- "${@}")
 eval set -- "${opts}"
 
 KEEPMACHINEID=
 IGNITIONFILE=
 IGNITIONURL=
 HASKEEPPATHS=
+BACKUP=
+STOP=
+PREVIEWDELETE=
+PREVIEWKEEP=
+DELETEBACKUP=
+RESTOREBACKUP=
 
 while true; do
   case "$1" in
@@ -25,20 +31,25 @@ while true; do
     echo "  preserved as well because MYPATH/.* is automatically appended as additonal regular expression for paths to keep."
     echo "  To delete the contents of a folder but keep the folder itself, specify it as equivalent regular expression in the form of"
     echo "  '^/etc/mypath', '/etc/mypath$', '/etc/mypat[h]', '/etc/(mypath)', or '(/etc/mypath)'. The used regular expression language"
-    echo "  is that of egrep. Assuming you specified '/etc/mypath', you can test which paths will be deleted with (note the '-not'):"
-    echo "    find / /etc -xdev -regextype egrep -not -regex '(/etc/mypath|/etc/mypath/.*)'"
-    echo "  You can tests which path will be kept with with (note the absence of '-not'):"
-    echo "    find / /etc -xdev -regextype egrep -regex '(/etc/mypath|/etc/mypath/.*)'"
-    echo "  Both / and /etc have to be specified because /etc is an overlay mount."
+    echo "  is that of egrep."
     echo "  Meaningful examples are:"
     echo "  - '/etc/ssh/ssh_host_.*' to preserve SSH host keys"
     echo "  - '/var/log' to preserve system logs"
     echo "  - '/var/lib/docker' '/var/lib/containerd' to preserve container state and images"
+    echo "  The rootfs does not include the files from /etc that are provided by the overlay mount unless they were copied up."
+    echo "  Therefore, you won't see them in the preview or backup."
     echo "Options:"
     echo "  -F, --ignition-file <FILE>	Writes the given Ignition config JSON file to /usr/share/oem/config.ign"
     echo "  -U, --ignition-url <URL>	Writes the given Ignition config JSON URL as kernel cmdline parameter to /usr/share/oem/grub.cfg"
     echo "  -K, --keep-paths <REGEX>...	Writes the given regular expressions for paths to keep as combined OS reset info to /selective-os-reset"
-    echo "  -M, --keep-machine-id	Writes the current machine ID as kernel cmdline parameter to /usr/share/oem/grub.cfg to preserve it"
+    echo "  -M, --keep-machine-id		Writes the current machine ID as kernel cmdline parameter to /usr/share/oem/grub.cfg to preserve it"
+    echo "  -B, --backup			Copies the files that will be deleted to /flatcar-backup/"
+    echo "Actions (exclusive, no OS reset will be staged):"
+    echo "  -S, --stop			Stops the staged OS reset and nothing will happen on the next boot"
+    echo "  -P, --preview-delete		Prints the files that will be deleted"
+    echo "  -W, --preview-keep		Prints the files that will be kept"
+    echo "  -D, --delete-backup		Deletes the backup under /flatcar-backup/"
+    echo "  -R, --restore-backup		Copies the files from /flatcar-backup/ to their original location on the rootfs"
     echo
     echo "Example for selectively resetting the OS with retriggering Ignition while keeping SSH host keys, logs, and machine ID:"
     echo "  sudo $(basename "${0}") --keep-machine-id --keep-paths '/etc/ssh/ssh_host_.*' /var/log"
@@ -65,6 +76,24 @@ while true; do
   -M|--keep-machine-id)
     KEEPMACHINEID=1
     ;;
+  -B|--backup)
+    BACKUP=1
+    ;;
+  -S|--stop)
+    STOP=1
+    ;;
+  -P|--preview-delete)
+    PREVIEWDELETE=1
+    ;;
+  -W|--preview-keep)
+    PREVIEWKEEP=1
+    ;;
+  -D|--delete-backup)
+    DELETEBACKUP=1
+    ;;
+  -R|--restore-backup)
+    RESTOREBACKUP=1
+    ;;
   --)
     shift
     break;;
@@ -89,7 +118,117 @@ if [ "${HASKEEPPATHS}" = 1 ]; then
   done
 fi
 
+if [ -e "/selective-os-reset" ]; then
+  echo "INFO: An OS reset was staged already from a previous run."
+  echo
+fi
+
+checkargs="${STOP}${PREVIEWDELETE}${PREVIEWKEEP}${DELETEBACKUP}${RESTOREBACKUP}"
+if [ "${checkargs}" != "" ] && [ "${checkargs}" != "1" ]; then
+  echo "Error: Only one exclusive action allowed" > /dev/stderr
+  exit 1
+fi
+
 [ "$EUID" = "0" ] || { echo "Need to be root: sudo $0 $opts" > /dev/stderr ; exit 1 ; }
+
+function generate_regex() {
+  local ENTRY=
+  echo -n '('
+  for ENTRY in "${KEEP[@]}"; do
+    # If it ends with / we cut it away as it's optional and also won't match the paths find prints for directories
+    ENTRY="${ENTRY%/}"
+    # If this here starts with / and doesn't end with $|)|*|]|? we will generate an additional regex entry to keep not only the path but also its contents
+    if [[ "${ENTRY}" = /* ]] && [[ "${ENTRY}" != *'$' ]] && [[ "${ENTRY}" != *')' ]] && [[ "${ENTRY}" != *'*' ]] && [[ "${ENTRY}" != *']' ]] && [[ "${ENTRY}" != *'?' ]]; then
+      echo -n "${ENTRY}/.*|"
+    fi
+    echo -n "${ENTRY}|"
+  done
+  echo '/flatcar-backup|/flatcar-backup/.*|/selective-os-reset)'
+  # If nothing should be kept but we need to have at least one entry,
+  # therefore, use the flag file itself as entry which will be removed anyway
+}
+
+function walkroot() {
+  local action="$1"
+  local extraarg="${2-}"
+  while IFS= read -r -d '' entry; do
+    "${action}" "${entry}"
+  done < <(unshare -m sh -c "umount /etc && find / -xdev -regextype egrep ${extraarg} -regex '$(generate_regex)' -print0")
+  # Don't use -depth to make sure we process directories first.
+  # Do the print0 as last action, after filtering.
+  true # Do not carry any last condition evaluation over as return code
+}
+
+# Handle exclusive actions
+
+if [ "${STOP}" = 1 ]; then
+  echo "Removing /selective-os-reset and /boot/flatcar/first_boot"
+  rm -f "/selective-os-reset" "/boot/flatcar/first_boot"
+  exit 0
+elif [ "${PREVIEWDELETE}" = 1 ]; then
+  # For find -not means that we look at all files that are not matched by the keep regex
+  walkroot echo -not
+  echo "Note that it is ok to delete the /bin or /lib symlinks and any other OS files/directories like /etc or /.etc-work as they will be recreated."
+  exit 0
+elif [ "${PREVIEWKEEP}" = 1 ]; then
+  walkroot echo
+  exit 0
+elif [ "${DELETEBACKUP}" = 1 ]; then
+  echo "Removing /flatcar-backup/ directory"
+  rm -rf "/flatcar-backup/"
+  exit 0
+elif [ "${RESTOREBACKUP}" = 1 ]; then
+  if [ ! -d "/flatcar-backup/" ]; then
+    echo "Error: The directory /flatcar-backup/ does not exist" > /dev/stderr
+    exit 1
+  fi
+  echo "Restoring rootfs files from /flatcar-backup/"
+  # TODO: our rsync does not support --acls
+  unshare -m sh -c "umount /etc && rsync -x -a --sparse --inplace -v /flatcar-backup/ /"
+  echo "You should reboot now"
+  exit 0
+fi
+
+### Default action is to stage a reset ###
+
+function backup_cp() {
+  local entry="$1"
+  local newpath="/flatcar-backup/${entry}"
+  if [ "${entry}" != "/etc" ] && mountpoint -q "${entry}"; then
+    return # Don't copy a mountpoint folder like /proc because we can't restore it well (also skips /)
+  fi
+  if [ "${entry}" = "/.etc-work" ] || [[ "${entry}" = "/.etc-work/"* ]]; then
+    return # No need to store the overlay work dir either
+  fi
+  if [ ! -d "$(dirname "${newpath}")" ]; then
+    local tocreate=""
+    while IFS= read -r -d '' pathpart; do
+      if [ "${pathpart}" = "" ]; then
+        continue
+      fi
+      tocreate="${tocreate}/${pathpart}"
+      if [ ! -d "/flatcar-backup${tocreate}" ]; then
+        # Use rsync to create the directory with the right permissions but don't copy its contents
+        # TODO: --acls
+        unshare -m sh -c "umount /etc && rsync -x -a --exclude='*' '${tocreate}' '/flatcar-backup${tocreate}'"
+      fi
+    done < <(dirname -z "${entry}" | tr '/' '\0')
+  fi
+  # TODO: --acls
+  unshare -m sh -c "umount /etc && if [ -d '${entry}' ] && [ ! -L '${entry}' ]; then rsync -x -a --exclude='*' '${entry}/' '${newpath}/'; else cp -a '${entry}' '${newpath}'; fi"
+}
+
+if [ "${BACKUP}" = 1 ]; then
+  echo "Removing existing /flatcar-backup/ directory"
+  rm -rf "/flatcar-backup/"
+  echo "Copying files that will be deleted to /flatcar-backup/"
+  mkdir /flatcar-backup
+  walkroot backup_cp -not
+else
+  echo "WARNING: Running without --backup can cause data loss if the keep paths don't work as expected."
+  echo "Also check whether your regex works as wanted with --preview-delete and --preview-keep."
+  echo
+fi
 
 if [ "${KEEPMACHINEID}" = 1 ]; then
   MACHINEID=$(cat /etc/machine-id)
@@ -127,22 +266,9 @@ if [ -e /usr/share/oem/grub.cfg ]; then
   sed -i '/set linux_append="\$linux_append *"/d' /usr/share/oem/grub.cfg
 fi
 
-{
-  echo -n '('
-  for ENTRY in "${KEEP[@]}"; do
-    # If it ends with / we cut it away as it's optional and also won't match the paths find prints for directories
-    ENTRY="${ENTRY%/}"
-    # If this here starts with / and doesn't end with $|)|*|]|? we will generate an additional regex entry to keep not only the path but also its contents
-    if [[ "${ENTRY}" = /* ]] && [[ "${ENTRY}" != *'$' ]] && [[ "${ENTRY}" != *')' ]] && [[ "${ENTRY}" != *'*' ]] && [[ "${ENTRY}" != *']' ]] && [[ "${ENTRY}" != *'?' ]]; then
-      echo -n "${ENTRY}/.*|"
-    fi
-    echo -n "${ENTRY}|"
-  done
-  echo '/selective-os-reset)'
-  # If nothing should be kept but we need to have at least one entry,
-  # therefore, use the flag file itself as entry which will be removed anyway
-} > /selective-os-reset
+generate_regex > /selective-os-reset
 
 touch /boot/flatcar/first_boot
 
-echo "Prepared /selective-os-reset and /boot/flatcar/first_boot, you can reboot now"
+echo "Prepared /selective-os-reset and /boot/flatcar/first_boot"
+echo "Staged OS reset, you can reboot now"
