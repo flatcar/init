@@ -122,7 +122,7 @@ func (test Test) MountPartitions(t *testing.T, loopDevice string) string {
 	util.MustRun(t, "mount", fmt.Sprintf("%sp9", loopDevice), root)
 	util.MustRun(t, "mount", fmt.Sprintf("%sp1", loopDevice), filepath.Join(root, "boot"))
 	util.MustRun(t, "mount", fmt.Sprintf("%sp3", loopDevice), filepath.Join(root, "usr"), "-o", "ro")
-	util.MustRun(t, "mount", fmt.Sprintf("%sp6", loopDevice), filepath.Join(root, "usr", "share", "oem"))
+	util.MustRun(t, "mount", fmt.Sprintf("%sp6", loopDevice), filepath.Join(root, "oem"))
 
 	return root
 }
@@ -224,7 +224,7 @@ func (test Test) WriteFile(t *testing.T, name, data string) string {
 }
 
 func (test Test) ValidateIgnition(t *testing.T, rootDir, config string) {
-	oemPath := filepath.Join(rootDir, "usr", "share", "oem")
+	oemPath := filepath.Join(rootDir, "oem")
 
 	data, err := ioutil.ReadFile(filepath.Join(oemPath, "flatcar-install.json"))
 	if os.IsNotExist(err) {
@@ -300,9 +300,9 @@ func (test Test) ValidatePartitionTableWiped(t *testing.T, diskFile string) {
 }
 
 func (test Test) ValidateOEM(t *testing.T, rootDir string) {
-	data, err := ioutil.ReadFile(filepath.Join(rootDir, "usr", "share", "oem", "grub.cfg"))
+	data, err := ioutil.ReadFile(filepath.Join(rootDir, "oem", "grub.cfg"))
 	if err != nil {
-		t.Fatalf("reading /usr/share/oem/grub.cfg: %v", err)
+		t.Fatalf("reading /oem/grub.cfg: %v", err)
 	}
 
 	var expectedOEM string

@@ -22,6 +22,5 @@ A few notes on things that must happen which are unique to Flatcar.
 * initialize `/`: The `/` partition can be completely formatted by the
   user. Run systemd-tmpfiles to set everything up into a known state.
 * mount `/usr`: The entire distro lives in this directory.
-* mount `/usr/share/oem`: If an OEM is available on disk make sure it gets
-  mounted here.
+* mount `/oem`: If an OEM is available on disk make sure it gets mounted here.
 * generate ssh keys: The stock sshd units do not handle this so we need to.
