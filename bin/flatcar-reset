@@ -39,10 +39,10 @@ while true; do
     echo "  The rootfs does not include the files from /etc that are provided by the overlay mount unless they were copied up."
     echo "  Therefore, you won't see them in the preview or backup."
     echo "Options:"
-    echo "  -F, --ignition-file <FILE>	Writes the given Ignition config JSON file to /usr/share/oem/config.ign"
-    echo "  -U, --ignition-url <URL>	Writes the given Ignition config JSON URL as kernel cmdline parameter to /usr/share/oem/grub.cfg"
+    echo "  -F, --ignition-file <FILE>	Writes the given Ignition config JSON file to /oem/config.ign"
+    echo "  -U, --ignition-url <URL>	Writes the given Ignition config JSON URL as kernel cmdline parameter to /oem/grub.cfg"
     echo "  -K, --keep-paths <REGEX>...	Writes the given regular expressions for paths to keep as combined OS reset info to /selective-os-reset"
-    echo "  -M, --keep-machine-id		Writes the current machine ID as kernel cmdline parameter to /usr/share/oem/grub.cfg to preserve it"
+    echo "  -M, --keep-machine-id		Writes the current machine ID as kernel cmdline parameter to /oem/grub.cfg to preserve it"
     echo "  -B, --backup			Copies the files that will be deleted to /flatcar-backup/"
     echo "Actions (exclusive, no OS reset will be staged):"
     echo "  -S, --stop			Stops the staged OS reset and nothing will happen on the next boot"
@@ -232,38 +232,38 @@ fi
 
 if [ "${KEEPMACHINEID}" = 1 ]; then
   MACHINEID=$(cat /etc/machine-id)
-  touch /usr/share/oem/grub.cfg
-  sed -i "s/systemd\.machine_id=[a-f0-9]*//g" /usr/share/oem/grub.cfg
-  echo "set linux_append=\"\$linux_append systemd.machine_id=${MACHINEID}\"" >> /usr/share/oem/grub.cfg
-  echo "Wrote machine ID as kernel cmdline parameter to /usr/share/oem/grub.cfg"
+  touch /oem/grub.cfg
+  sed -i "s/systemd\.machine_id=[a-f0-9]*//g" /oem/grub.cfg
+  echo "set linux_append=\"\$linux_append systemd.machine_id=${MACHINEID}\"" >> /oem/grub.cfg
+  echo "Wrote machine ID as kernel cmdline parameter to /oem/grub.cfg"
 else
-  if [ -e /usr/share/oem/grub.cfg ]; then
-    sed -i "s/systemd\.machine_id=[a-f0-9]*//g" /usr/share/oem/grub.cfg
-    echo "Removed any hardcoded systemd.machine_id kernel cmdline parameter in /usr/share/oem/grub.cfg"
+  if [ -e /oem/grub.cfg ]; then
+    sed -i "s/systemd\.machine_id=[a-f0-9]*//g" /oem/grub.cfg
+    echo "Removed any hardcoded systemd.machine_id kernel cmdline parameter in /oem/grub.cfg"
   fi
 fi
 if [ "${IGNITIONFILE}" != "" ]; then
-  if [ -e /usr/share/oem/grub.cfg ]; then
-    sed -i "s/ignition.config.url=[^ \"']*//g" /usr/share/oem/grub.cfg
-    echo "Removed any ignition.config.url kernel cmdline parameter in /usr/share/oem/grub.cfg"
+  if [ -e /oem/grub.cfg ]; then
+    sed -i "s/ignition.config.url=[^ \"']*//g" /oem/grub.cfg
+    echo "Removed any ignition.config.url kernel cmdline parameter in /oem/grub.cfg"
   fi
-  cp "${IGNITIONFILE}" /usr/share/oem/config.ign
-  echo "Wrote Ignition file /usr/share/oem/config.ign"
+  cp "${IGNITIONFILE}" /oem/config.ign
+  echo "Wrote Ignition file /oem/config.ign"
 fi
 if [ "${IGNITIONURL}" != "" ]; then
-  if [ -e /usr/share/oem/config.ign ]; then
-    rm /usr/share/oem/config.ign
-    echo "Removed Ignition file /usr/share/oem/config.ign"
+  if [ -e /oem/config.ign ]; then
+    rm /oem/config.ign
+    echo "Removed Ignition file /oem/config.ign"
   fi
-  touch /usr/share/oem/grub.cfg
-  sed -i "s/ignition.config.url=[^ \"']*//g" /usr/share/oem/grub.cfg
-  echo "set linux_append=\"\$linux_append ignition.config.url=${IGNITIONURL}\"" >> /usr/share/oem/grub.cfg
-  echo "Wrote Ignition URL as kernel cmdline parameter to /usr/share/oem/grub.cfg"
+  touch /oem/grub.cfg
+  sed -i "s/ignition.config.url=[^ \"']*//g" /oem/grub.cfg
+  echo "set linux_append=\"\$linux_append ignition.config.url=${IGNITIONURL}\"" >> /oem/grub.cfg
+  echo "Wrote Ignition URL as kernel cmdline parameter to /oem/grub.cfg"
 fi
 # Throw away rests of previous modifications that are now no-ops
-if [ -e /usr/share/oem/grub.cfg ]; then
+if [ -e /oem/grub.cfg ]; then
   # shellcheck disable=SC2016 # We want to literally match $linux_append
-  sed -i '/set linux_append="\$linux_append *"/d' /usr/share/oem/grub.cfg
+  sed -i '/set linux_append="\$linux_append *"/d' /oem/grub.cfg
 fi
 
 generate_regex > /selective-os-reset
