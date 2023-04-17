@@ -11,7 +11,6 @@ ConditionDirectoryNotEmpty=|/usr/lib/extensions
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/bin/systemctl daemon-reload
 ExecStart=/usr/bin/systemctl restart --no-block sockets.target timers.target multi-user.target
 [Install]
 WantedBy=sysinit.target
