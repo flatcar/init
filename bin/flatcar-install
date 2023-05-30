@@ -74,7 +74,7 @@ CHANNEL_ID=${GROUP:-stable}
 BOARD=$(default_board)
 
 OEM_ID=
-for f in /usr/share/oem/oem-release /etc/oem-release; do
+for f in /oem/oem-release /usr/share/oem/oem-release /etc/oem-release; do
     if [[ -e $f ]]; then
         # Pull in OEM information too, but prefixing variables with OEM_
         eval "$(sed -e 's/^/OEM_/' $f)"

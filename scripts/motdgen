@@ -13,8 +13,8 @@ source /usr/lib/os-release
 mkdir -p /run/flatcar
 ln -sfT flatcar /run/coreos
 OEM=""
-if [ -f /usr/share/oem/oem-release ]; then
-  OEM="$(source /usr/share/oem/oem-release; echo " for $NAME")"
+if [ -f /oem/oem-release ]; then
+  OEM="$(source /oem/oem-release; echo " for $NAME")"
 fi
 echo -e "\e[${ANSI_COLOR}m${NAME}\e[39m ${GROUP} ${VERSION}${OEM}" > /run/flatcar/motd
 
