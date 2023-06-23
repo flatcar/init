@@ -568,7 +568,9 @@ if [[ -n "${DRY_RUN}" ]]; then
     exit 0
 fi
 
-function is_modified() [[ -e "${WORKDIR}/disk_modified" ]]
+function is_modified() {
+    [[ -e "${WORKDIR}/disk_modified" ]]
+}
 
 _disk_status=
 function wait_for_disk() {
