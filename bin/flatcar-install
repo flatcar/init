@@ -573,14 +573,14 @@ function is_modified() {
 }
 
 _disk_status=
-function wait_for_disk() {
+function get_disk_status() {
     [ -n "${_disk_status}" ] ||
-    read -rt 7200 _disk_status <> "${WORKDIR}/disk_modified"
+    read -rt 0.1 _disk_status <> "${WORKDIR}/disk_modified" # Use a timeout of 100ms to behave like a non-blocking read
+    echo "${_disk_status}"
 }
 
 function write_to_disk() {
     mkfifo -m 0600 "${WORKDIR}/disk_modified"
-    trap '(exec 2>/dev/null ; echo done > "${WORKDIR}/disk_modified") &' RETURN
 
     # We are at the point of no return, so wipe disk labels missed below.
     # In particular, ZFS writes labels in the last half-MiB of the disk.
@@ -599,6 +599,8 @@ function write_to_disk() {
     done
     [ -z "$try" ] || exit 1
     udevadm settle
+    # Communicate success through FIFO when the caller can't act on the return code
+    (exec 2>/dev/null ; echo "done" > "${WORKDIR}/disk_modified") &
 }
 
 function install_from_file() {
@@ -704,6 +706,11 @@ function install_from_url() {
         [ ${EEND[2]} -ne 0 ] && echo "${EEND[2]}: GPG signature verification failed for ${IMAGE_NAME}" >&2
         exit 1
     fi 3> >(write_to_disk)
+    wait
+    if [ "$(get_disk_status)" != "done" ]; then
+      echo "write_to_disk: Failed writing image to disk" >&2
+      exit 1
+    fi
 }
 
 function write_cloudinit() {
@@ -773,7 +780,6 @@ else
     else
         install_from_url
     fi
-    wait_for_disk
     write_cloudinit
     write_ignition
     if [[ -n "${CREATE_UEFI}" ]]; then
