@@ -704,7 +704,9 @@ function install_from_url() {
     fi 3> >(write_to_disk)
 }
 
-function write_cloudinit() if [[ -n "${CLOUDINIT}${COPY_NET}" ]]; then
+function write_cloudinit() {
+  if [[ -n "${CLOUDINIT}${COPY_NET}" ]]; then
+    (
     # The ROOT partition should be #9 but make no assumptions here!
     # Also don't mount by label directly in case other devices conflict.
     local ROOT_DEV=$(blkid -t "LABEL=ROOT" -o device "${DEVICE}"*)
@@ -714,7 +716,7 @@ function write_cloudinit() if [[ -n "${CLOUDINIT}${COPY_NET}" ]]; then
       "btrfs") mount -t btrfs -o subvol=root "${ROOT_DEV}" "${WORKDIR}/rootfs" ;;
       *)       mount "${ROOT_DEV}" "${WORKDIR}/rootfs" ;;
     esac
-    trap 'umount "${WORKDIR}/rootfs"' RETURN
+    trap 'umount "${WORKDIR}/rootfs"' EXIT
 
     if [[ -n "${CLOUDINIT}" ]]; then
       echo "Installing cloud-config..."
@@ -727,20 +729,26 @@ function write_cloudinit() if [[ -n "${CLOUDINIT}${COPY_NET}" ]]; then
       # Copy the entire directory, do not overwrite anything that might exist there, keep permissions, and copy the resolve.conf link as a file.
       cp --recursive --no-clobber --preserve --dereference /run/systemd/network/* "${WORKDIR}/rootfs/etc/systemd/network"
     fi
-fi
+    )
+  fi
+}
 
-function write_ignition() if [[ -n "${IGNITION}" ]]; then
+function write_ignition() {
+  if [[ -n "${IGNITION}" ]]; then
+    (
     # The OEM partition should be #6 but make no assumptions here!
     # Also don't mount by label directly in case other devices conflict.
     local OEM_DEV=$(blkid -t "LABEL=OEM" -o device "${DEVICE}"*)
 
     mkdir -p "${WORKDIR}/oemfs"
     mount "${OEM_DEV}" "${WORKDIR}/oemfs" || { btrfstune -f -u "${OEM_DEV}" ; mount "${OEM_DEV}" "${WORKDIR}/oemfs" ; }
-    trap 'umount "${WORKDIR}/oemfs"' RETURN
+    trap 'umount "${WORKDIR}/oemfs"' EXIT
 
     echo "Installing Ignition config ${IGNITION}..."
     cp "${IGNITION}" "${WORKDIR}/oemfs/config.ign"
-fi
+    )
+  fi
+}
 
 function create_uefi() {
     ensure_tool "efibootmgr"
