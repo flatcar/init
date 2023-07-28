@@ -1,13 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-opts=$(getopt --name "$(basename "${0}")" --options 'hV:P:L:M:DFA' \
-       --longoptions 'help,to-version:,to-payload:,listen-port-1:,listen-port-2:,force-dev-key,force-flatcar-key,disable-afterwards' -- "${@}")
+opts=$(getopt --name "$(basename "${0}")" --options 'hV:P:E:L:M:DFA' \
+       --longoptions 'help,to-version:,to-payload:,extension:,listen-port-1:,listen-port-2:,force-dev-key,force-flatcar-key,disable-afterwards' -- "${@}")
 eval set -- "${opts}"
 
 USER_PAYLOAD=
 PAYLOAD=
 VERSION=
+EXTENSIONS=()
 FORCE_DEV_KEY=
 FORCE_FLATCAR_KEY=
 DISABLE_AFTERWARDS=
@@ -17,20 +18,24 @@ LISTEN_PORT_2=9091
 while true; do
   case "$1" in
   -h|--help)
-    echo "Usage: $(basename "${0}") --to-version VERSION [--to-payload FILENAME] [--listen-port-1 PORT] [--listen-port-2 PORT] [--force-dev-key|--force-flatcar-key|--disable-afterwards]"
+    echo "Usage: $(basename "${0}") --to-version VERSION [--to-payload FILENAME [--extension FILENAME]...] [--listen-port-1 PORT] [--listen-port-2 PORT] [--force-dev-key|--force-flatcar-key|--disable-afterwards]"
     echo "  Updates Flatcar Container Linux through a temporary local update service on localhost."
     echo "  The update-engine service will be unmasked (to disable updates again use -A)."
     echo "  The reboot should be done after applying the update, either manually or through your reboot manager (check locksmithd/FLUO)."
     echo "  An error will be reported if a previously applied update wasn't booted into yet (you may discard it with 'update_engine_client -reset_status')."
     echo "  Warning: If you jump between channels, delete any GROUP configured in /etc/flatcar/update.conf for the new defaults to apply."
     echo "Options:"
-    echo "  -V, --to-version <VERSION>	Updates to the version, by default using the matching release from update.release.flatcar-linux.net"
-    echo "  -P, --to-payload <FILENAME>	Updates to the given update payload file instead of downloading it"
-    echo "  -D, --force-dev-key		Bind-mounts the dev key over /usr/share/update_engine/update-payload-key.pub.pem"
-    echo "  -F, --force-flatcar-key	Bind-mounts the Flatcar release key over /usr/share/update_engine/update-payload-key.pub.pem"
-    echo "  -A, --disable-afterwards	Writes SERVER=disabled to /etc/flatcar/update.conf when done (this overwrites any custom SERVER)"
-    echo "  -L, --listen-port-1 <PORT>  Overwrites standard listen port 9090"
-    echo "  -M, --listen-port-2 <PORT>  Overwrites standard listen port 9091"
+    echo "  -V, --to-version <VERSION>		Updates to the version, by default using the matching release from update.release.flatcar-linux.net"
+    echo "  -P, --to-payload <FILENAME>		Updates to the given Flatcar base update payload file instead of downloading it"
+    echo "					(filename does not matter and internally flatcar_production_update.gz is used)"
+    echo "  -E, --extension <FILENAME>		Provides the given extension image as part of the update, required for -P if the system needs an OEM"
+    echo "					or a Flatcar extension, can/must be specified multiple times (filename matters and should end with"
+    echo "					either oem-OEMID.gz or flatcar-NAME.gz)"
+    echo "  -D, --force-dev-key			Bind-mounts the dev key over /usr/share/update_engine/update-payload-key.pub.pem"
+    echo "  -F, --force-flatcar-key		Bind-mounts the Flatcar release key over /usr/share/update_engine/update-payload-key.pub.pem"
+    echo "  -A, --disable-afterwards		Writes SERVER=disabled to /etc/flatcar/update.conf when done (this overwrites any custom SERVER)"
+    echo "  -L, --listen-port-1 <PORT>		Overwrites standard listen port 9090"
+    echo "  -M, --listen-port-2 <PORT>		Overwrites standard listen port 9091"
     echo
     echo "Example for updating to the latest Stable release and disabling automatic updates afterwards:"
     echo '  VER=$(curl -fsSL https://stable.release.flatcar-linux.net/amd64-usr/current/version.txt | grep FLATCAR_VERSION= | cut -d = -f 2)'
@@ -49,6 +54,16 @@ while true; do
       echo "Error: --to-payload must not have an empty value" > /dev/stderr ; exit 1
     fi
     ;;
+  -E|--extension)
+    shift
+    if [ "$1" = "" ]; then
+      echo "Error: --extension must not have an empty value" > /dev/stderr ; exit 1
+    fi
+    if [[ ! "$(basename -- "$1")" =~ ^(flatcar|oem).*gz$ ]]; then
+      echo "Error: --extension expects paths to files named oem-OEMID.gz or flatcar-NAME.gz (with possible 'flatcar_test_update-' prefix), found: $1" > /dev/stderr ; exit 1
+    fi
+    EXTENSIONS+=("$1")
+    ;;
   -L|--listen-port-1)
     shift
     LISTEN_PORT_1="$1"
@@ -58,7 +73,7 @@ while true; do
     ;;
   -M|--listen-port-2)
     shift
-    LISTEN_PORT_2="$1"    
+    LISTEN_PORT_2="$1"
     if [ "$LISTEN_PORT_2" = "" ]; then
       echo "Error: --listen-port-2 must not have an empty value" > /dev/stderr ; exit 1
     fi
@@ -81,6 +96,14 @@ while true; do
   shift
 done
 
+if [ "$#" != 0 ]; then
+  echo "Error: unexpected extra argumuents: $*" > /dev/stderr ; exit 1
+fi
+
+if [ "$PAYLOAD" = "" ] && [ "${#EXTENSIONS[@]}" != 0 ]; then
+  echo "Error: local extensions are only supported with --to-payload" > /dev/stderr ; exit 1
+fi
+
 if [ "${VERSION}" = "" ]; then
   echo "Error: must specify --to-version" > /dev/stderr ; exit 1
 fi
@@ -88,6 +111,27 @@ fi
 if [ "${FORCE_DEV_KEY}" = "1" ] && [ "${FORCE_FLATCAR_KEY}" = "1" ]; then
   echo "Error: must only specify one of --force-dev-key or --force-flatcar-key" > /dev/stderr ; exit 1
 fi
+
+# Use the old mount point for compatibility with old instances, where the script gets copied to
+OEMID=$({ grep -m 1 -o "^ID=.*" /usr/share/oem/oem-release 2> /dev/null || true ; } | cut -d = -f 2)
+
+# Determine what to download from release server if no local payload is given.
+# Using /usr/share/flatcar/oems/ from the currently running version means the download is only best-effort
+# to prevent a later fallback download when updating old instances that aren't fully migrated yet
+if [ "${OEMID}" != "" ] && { [ -e "/usr/share/flatcar/oems/${OEMID}" ] || [ -e "/usr/share/oem/sysext/active-oem-${OEMID}" ]; }; then
+  if [ "$PAYLOAD" = "" ]; then
+    EXTENSIONS+=("/var/tmp/flatcar-update/oem-${OEMID}.gz")
+  elif ! echo " ${EXTENSIONS[*]} " | grep -q -P "[ /](flatcar_test_update-)?oem-${OEMID}.gz "; then # Surrounded with space to only match base name
+    echo "Error: system requires '${OEMID}' OEM extension but not passed in --extension" > /dev/stderr ; exit 1
+  fi
+fi
+for NAME in $(grep -h -o '^[^#]*' /etc/flatcar/enabled-sysext.conf /usr/share/flatcar/enabled-sysext.conf 2> /dev/null | grep -v -x -f <(grep '^-' /etc/flatcar/enabled-sysext.conf 2> /dev/null | cut -d - -f 2-) | grep -v -P '^(-).*'); do
+  if [ "$PAYLOAD" = "" ]; then
+    EXTENSIONS+=("/var/tmp/flatcar-update/flatcar-${NAME}.gz")
+  elif ! echo " ${EXTENSIONS[*]} " | grep -q -P "[ /](flatcar_test_update-)?flatcar-${NAME}.gz "; then
+    echo "Error: system requires '${NAME}' Flatcar extension but not passed in --extension" > /dev/stderr ; exit 1
+  fi
+done
 
 [ "$EUID" = "0" ] || { echo "Need to be root: sudo $0 $opts" > /dev/stderr ; exit 1 ; }
 
@@ -131,41 +175,98 @@ if [ "$BOARD" = "" ]; then
   echo "Error: could not find board from /usr/share/coreos/release" > /dev/stderr ; exit 1
 fi
 
-SHA256_TO_CHECK=
+mkdir -p "/var/tmp/flatcar-update"
 if [ "$PAYLOAD" = "" ]; then
-  PAYLOAD="/var/tmp/update_payload"
-  rm -f "$PAYLOAD"
-  echo "Downloading update payload..."
-  curl -fsSL -o "$PAYLOAD" --retry-delay 1 --retry 60 --retry-connrefused --retry-max-time 60 --connect-timeout 20 "https://update.release.flatcar-linux.net/${BOARD}/${VERSION}/flatcar_production_update.gz"
-  SHA256_TO_CHECK=$(curl -fsSL --retry-delay 1 --retry 60 --retry-connrefused --retry-max-time 60 --connect-timeout 20 "https://update.release.flatcar-linux.net/${BOARD}/${VERSION}/flatcar_production_update.gz.sha256" | cut -d " " -f 1)
-  if [ "${SHA256_TO_CHECK}" = "" ]; then
-    echo "Error: could not download sha256 checksum file" > /dev/stderr ; exit 1
-  fi
-  SHA256_HEX=$(sha256sum -b "$PAYLOAD" | cut -d " " -f 1)
-  if [ "${SHA256_TO_CHECK}" != "${SHA256_HEX}" ]; then
-    echo "Error: mismatch with downloaded SHA256 checksum (${SHA256_TO_CHECK})" > /dev/stderr ; exit 1
-  fi
-  echo "When restarting after an error you may reuse it with '--to-payload $PAYLOAD'"
+  echo "Downloading update payloads..."
+  PAYLOAD="/var/tmp/flatcar-update/flatcar_production_update.gz"
+  for DOWNLOAD_FILE in "$PAYLOAD" "${EXTENSIONS[@]}"; do
+    rm -f "${DOWNLOAD_FILE}"
+    BASEFILENAME="$(basename -- "${DOWNLOAD_FILE}")"
+    curl -fsSL -o "${DOWNLOAD_FILE}" --retry-delay 1 --retry 60 --retry-connrefused --retry-max-time 60 --connect-timeout 20 "https://update.release.flatcar-linux.net/${BOARD}/${VERSION}/${BASEFILENAME}"
+    SHA256_TO_CHECK=$(curl -fsSL --retry-delay 1 --retry 60 --retry-connrefused --retry-max-time 60 --connect-timeout 20 "https://update.release.flatcar-linux.net/${BOARD}/${VERSION}/${BASEFILENAME}.sha256" | cut -d " " -f 1)
+    if [ "${SHA256_TO_CHECK}" = "" ]; then
+      echo "Error: could not download sha256 checksum file" > /dev/stderr ; exit 1
+    fi
+    SHA256_HEX=$(sha256sum -b "${DOWNLOAD_FILE}" | cut -d " " -f 1)
+    if [ "${SHA256_TO_CHECK}" != "${SHA256_HEX}" ]; then
+      echo "Error: mismatch with downloaded SHA256 checksum (${SHA256_TO_CHECK})" > /dev/stderr ; exit 1
+    fi
+  done
+  echo "When restarting after an error you may reuse them with '--to-payload $PAYLOAD --extension ${EXTENSIONS[*]}' (add --extension for before each extension)"
+else
+  for DOWNLOAD_FILE in "$PAYLOAD" "${EXTENSIONS[@]}"; do
+    BASEFILENAME="$(basename -- "${DOWNLOAD_FILE}" | sed 's/flatcar_test_update-//g')"
+    if [ "${DOWNLOAD_FILE}" = "${PAYLOAD}" ]; then
+      BASEFILENAME="flatcar_production_update.gz"
+    fi
+    # The user may pass in the cached files on error
+    if [ "${DOWNLOAD_FILE}" != "/var/tmp/flatcar-update/${BASEFILENAME}" ]; then
+      ln -fs "$(readlink -f "${DOWNLOAD_FILE}")" "/var/tmp/flatcar-update/${BASEFILENAME}"
+    fi
+  done
 fi
 
 BASE="http://localhost:${LISTEN_PORT_2}/"
-HASH=$(openssl dgst -binary -sha1 < "$PAYLOAD" | base64)
-SHA256=$(openssl dgst -binary -sha256 < "$PAYLOAD" | base64)
-SIZE=$(stat --printf='%s\n' "$PAYLOAD")
-
 rm -f /tmp/response
 tee /tmp/response > /dev/null <<-EOF
 	<response protocol="3.0" server="flatcar-update"><daystart elapsed_seconds="0"></daystart>
 	<app appid="{e96281a6-d1af-4bde-9a0a-97b76e56dc57}" status="ok"><ping status="ok"></ping>
 	<updatecheck status="ok"><urls><url codebase="${BASE}"></url></urls>
-	<manifest version="${VERSION}"><packages><package name="flatcar_production_update.gz" hash="${HASH}" size="${SIZE}" required="true"></package></packages>
+	<manifest version="${VERSION}">
+	<packages>
+EOF
+
+
+for DOWNLOAD_FILE in "$PAYLOAD" "${EXTENSIONS[@]}"; do
+  HASH=$(openssl dgst -binary -sha1 < "${DOWNLOAD_FILE}" | base64)
+  SIZE=$(stat -L --printf='%s\n' "${DOWNLOAD_FILE}")
+  BASEFILENAME="$(basename -- "${DOWNLOAD_FILE}" | sed 's/flatcar_test_update-//g')"
+  REQUIRED="false"
+  if [ "${DOWNLOAD_FILE}" = "${PAYLOAD}" ]; then
+    # In case a local payload is given we have to use the correct name
+    BASEFILENAME="flatcar_production_update.gz"
+    REQUIRED="true"
+  fi
+  tee -a /tmp/response > /dev/null <<-EOF
+	<package name="${BASEFILENAME}" hash="${HASH}" size="${SIZE}" required="${REQUIRED}"></package>
+EOF
+done
+
+SHA256=$(openssl dgst -binary -sha256 < "$PAYLOAD" | base64)
+tee -a /tmp/response > /dev/null <<-EOF
+	</packages>
 	<actions><action event="postinstall" sha256="${SHA256}" DisablePayloadBackoff="true"></action></actions></manifest>
 	</updatecheck><event status="ok"></event></app></response>
 EOF
 
-ncat --keep-open -c "echo -en 'HTTP/1.1 200 OK\ncontent-type: application/gzip\ncontent-length: $SIZE\n\n'; cat \"$PAYLOAD\"" -l "$LISTEN_PORT_2" &
+trap "umount /usr/share/update_engine/update-payload-key.pub.pem 2> /dev/null || true; rm -f /tmp/response /tmp/payload-server ; kill 0" EXIT INT
 ncat --keep-open -c "echo -en 'HTTP/1.1 200 OK\ncontent-type: text/xml\ncontent-length: $(stat --printf='%s\n' /tmp/response)\n\n'; cat /tmp/response" -l "$LISTEN_PORT_1" &
-trap "umount /usr/share/update_engine/update-payload-key.pub.pem 2> /dev/null || true; rm -f /tmp/response ; kill 0" EXIT INT
+
+# Helper script because inline quoting is insane
+tee /tmp/payload-server > /dev/null <<'EOF'
+#!/bin/bash
+set -euo pipefail
+SERVE="$1"
+TYPE="$2"
+read -a WORDS
+if [ "${#WORDS[@]}" != 3 ] || [ "${WORDS[0]}" != "GET" ]; then
+  echo -ne "HTTP/1.1 400 Bad request\r\n\r\n"; exit 0
+fi
+# Subfolders are not supported for security reasons as this avoids having to deal with ../../ attacks
+FILE="${SERVE}/$(basename -- "${WORDS[1]}")"
+if [ -d "${FILE}" ] || [ ! -e "${FILE}" ]; then
+  echo -ne "HTTP/1.1 404 Not found\r\n\r\n" ; exit 0
+fi
+echo -ne "HTTP/1.1 200 OK\r\n"
+echo -ne "Content-Type: ${TYPE};\r\n"
+LEN=$(stat -L --printf='%s\n' "${FILE}")
+echo -ne "Content-Length: ${LEN}\r\n"
+echo -ne "\r\n"
+cat "${FILE}"
+EOF
+
+chmod +x /tmp/payload-server
+socat TCP-LISTEN:"${LISTEN_PORT_2}",reuseaddr,fork SYSTEM:'/tmp/payload-server /var/tmp/flatcar-update/ application/gzip' &
 
 if [ "${FORCE_DEV_KEY}" = "1" ] || [ "${FORCE_FLATCAR_KEY}" = "1" ]; then
   rm -f /tmp/key
@@ -198,8 +299,9 @@ if [ "$STATUS" = "" ]; then
 fi
 
 if [ "${USER_PAYLOAD}" = "" ]; then
-  echo "Removing payload $PAYLOAD"
-  rm -f "$PAYLOAD"
+  echo "Removing payload $PAYLOAD ${EXTENSIONS[*]}"
 fi
+# For the case that user payloads were given, this only removes the symlinks
+rm -rf "/var/tmp/flatcar-update"
 
 echo "Done, please make sure to reboot either manually or through your reboot manager (check locksmithd/FLUO)"
