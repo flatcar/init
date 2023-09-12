@@ -9,7 +9,7 @@ KernelCommandLine=coreos.oem.id=azure
 # VF driver currently used in Azure. If other drivers come into use, the
 # symptom will be a VF interface in the output of "networkctl" which never
 # finishes configuring.
-Driver=mlx4_en mlx5_core
+Driver=mlx4_en mlx5_core mana
 
 [Link]
 Unmanaged=yes
