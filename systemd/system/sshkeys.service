@@ -15,12 +15,10 @@ ConditionKernelCommandLine=|ignition.platform.id=gce
 ConditionKernelCommandLine=|flatcar.oem.id=gce
 ConditionKernelCommandLine=|coreos.oem.id=gce
 
-Upholds=coreos-metadata-sshkeys@core.service
-
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/bin/true
+ExecStart=/usr/bin/systemctl start coreos-metadata-sshkeys@core.service
 
 [Install]
 WantedBy=multi-user.target
