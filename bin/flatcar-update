@@ -222,13 +222,17 @@ for DOWNLOAD_FILE in "$PAYLOAD" "${EXTENSIONS[@]}"; do
   SIZE=$(stat -L --printf='%s\n' "${DOWNLOAD_FILE}")
   BASEFILENAME="$(basename -- "${DOWNLOAD_FILE}" | sed 's/flatcar_test_update-//g')"
   REQUIRED="false"
+  OPTHASH256=""
   if [ "${DOWNLOAD_FILE}" = "${PAYLOAD}" ]; then
     # In case a local payload is given we have to use the correct name
     BASEFILENAME="flatcar_production_update.gz"
     REQUIRED="true"
+  else
+    HASH256=$(sha256sum -b "${DOWNLOAD_FILE}" | cut -d " " -f 1)
+    OPTHASH256="hash_sha256=\"${HASH256}\""
   fi
   tee -a /tmp/response > /dev/null <<-EOF
-	<package name="${BASEFILENAME}" hash="${HASH}" size="${SIZE}" required="${REQUIRED}"></package>
+	<package name="${BASEFILENAME}" hash="${HASH}" ${OPTHASH256} size="${SIZE}" required="${REQUIRED}"></package>
 EOF
 done
 
