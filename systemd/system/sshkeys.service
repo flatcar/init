@@ -15,6 +15,10 @@ ConditionKernelCommandLine=|ignition.platform.id=gce
 ConditionKernelCommandLine=|flatcar.oem.id=gce
 ConditionKernelCommandLine=|coreos.oem.id=gce
 
+ConditionKernelCommandLine=|ignition.platform.id=openstack
+ConditionKernelCommandLine=|flatcar.oem.id=openstack
+ConditionKernelCommandLine=|coreos.oem.id=openstack
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
