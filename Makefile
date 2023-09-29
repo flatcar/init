@@ -31,8 +31,6 @@ install:
 	install -m 755 udev/bin/* $(DESTDIR)/lib/udev
 	install -m 644 configs/editor.sh $(DESTDIR)/etc/env.d/99editor
 	install -m 644 configs/modules-load.d/* $(DESTDIR)/usr/lib/modules-load.d/
-	install -m 600 configs/sshd_config $(DESTDIR)/usr/share/ssh/
-	install -m 644 configs/ssh_config $(DESTDIR)/usr/share/ssh/
 	install -m 644 configs/tmpfiles.d/* $(DESTDIR)/usr/lib/tmpfiles.d/
 	cp -a systemd/* $(DESTDIR)/usr/lib/systemd/
 	chmod 755 $(DESTDIR)/usr/lib/systemd/system-generators/*
