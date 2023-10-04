@@ -11,3 +11,6 @@ Driver=!veth dummy
 [DHCP]
 UseMTU=true
 UseDomains=true
+
+[DHCPv4]
+RoutesToDNS=false
