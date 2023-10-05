@@ -192,7 +192,7 @@ if [ "$PAYLOAD" = "" ]; then
       echo "Error: mismatch with downloaded SHA256 checksum (${SHA256_TO_CHECK})" > /dev/stderr ; exit 1
     fi
   done
-  echo "When restarting after an error you may reuse them with '--to-payload $PAYLOAD --extension ${EXTENSIONS[*]}' (add --extension for before each extension)"
+  echo "When restarting after an error you may reuse them with '--to-payload $PAYLOAD --extension ${EXTENSIONS[*]}' (add --extension before each extension)"
 else
   for DOWNLOAD_FILE in "$PAYLOAD" "${EXTENSIONS[@]}"; do
     BASEFILENAME="$(basename -- "${DOWNLOAD_FILE}" | sed 's/flatcar_test_update-//g')"
