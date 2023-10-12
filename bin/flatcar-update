@@ -38,7 +38,7 @@ while true; do
     echo "  -M, --listen-port-2 <PORT>		Overwrites standard listen port 9091"
     echo
     echo "Example for updating to the latest Stable release and disabling automatic updates afterwards:"
-    echo '  VER=$(curl -fsSL https://stable.release.flatcar-linux.net/amd64-usr/current/version.txt | grep FLATCAR_VERSION= | cut -d = -f 2)'
+    echo '  VER=$(source <(curl -fsSL https://stable.release.flatcar-linux.net/amd64-usr/current/version.txt); echo "${FLATCAR_VERSION}")'
     echo "  $(basename "${0}") -V \$VER -A"
     exit 1
     ;;
