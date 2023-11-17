@@ -1,4 +1,9 @@
 [Unit]
+# Don't race and we also want to rely on the folder to be created
+After=update-ssh-keys-after-ignition.service
+
+ConditionPathIsSymbolicLink=!/etc/systemd/system/coreos-metadata-sshkeys@core.service
+
 ConditionKernelCommandLine=|ignition.platform.id=packet
 ConditionKernelCommandLine=|flatcar.oem.id=packet
 ConditionKernelCommandLine=|coreos.oem.id=packet
@@ -22,6 +27,7 @@ ConditionKernelCommandLine=|coreos.oem.id=openstack
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+Restart=on-failure
 ExecStart=/usr/bin/systemctl start coreos-metadata-sshkeys@core.service
 
 [Install]
