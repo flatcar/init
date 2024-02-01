@@ -1,14 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-opts=$(getopt --name "$(basename "${0}")" --options 'hV:P:E:L:M:DFA' \
-       --longoptions 'help,to-version:,to-payload:,extension:,listen-port-1:,listen-port-2:,force-dev-key,force-flatcar-key,disable-afterwards' -- "${@}")
+opts=$(getopt --name "$(basename "${0}")" --options 'hV:P:E:O:L:M:DFA' \
+       --longoptions 'help,to-version:,to-payload:,extension:,oem-payloads:,listen-port-1:,listen-port-2:,force-dev-key,force-flatcar-key,disable-afterwards' -- "${@}")
 eval set -- "${opts}"
 
 USER_PAYLOAD=
 PAYLOAD=
 VERSION=
 EXTENSIONS=()
+USE_OEM=yes
 FORCE_DEV_KEY=
 FORCE_FLATCAR_KEY=
 DISABLE_AFTERWARDS=
@@ -18,7 +19,7 @@ LISTEN_PORT_2=9091
 while true; do
   case "$1" in
   -h|--help)
-    echo "Usage: $(basename "${0}") --to-version VERSION [--to-payload FILENAME [--extension FILENAME]...] [--listen-port-1 PORT] [--listen-port-2 PORT] [--force-dev-key|--force-flatcar-key|--disable-afterwards]"
+    echo "Usage: $(basename "${0}") --to-version VERSION [--to-payload FILENAME [--extension FILENAME]...] [--oem-payloads <yes|no>] [--listen-port-1 PORT] [--listen-port-2 PORT] [--force-dev-key|--force-flatcar-key|--disable-afterwards]"
     echo "  Updates Flatcar Container Linux through a temporary local update service on localhost."
     echo "  The update-engine service will be unmasked (to disable updates again use -A)."
     echo "  The reboot should be done after applying the update, either manually or through your reboot manager (check locksmithd/FLUO)."
@@ -31,11 +32,12 @@ while true; do
     echo "  -E, --extension <FILENAME>		Provides the given extension image as part of the update, required for -P if the system needs an OEM"
     echo "					or a Flatcar extension, can/must be specified multiple times (filename matters and should end with"
     echo "					either oem-OEMID.gz or flatcar-NAME.gz)"
+    echo "  -O, --oem-payloads <yes|no>		Overwrites whether OEM payloads should be provided (default '${USE_OEM}')"
     echo "  -D, --force-dev-key			Bind-mounts the dev key over /usr/share/update_engine/update-payload-key.pub.pem"
     echo "  -F, --force-flatcar-key		Bind-mounts the Flatcar release key over /usr/share/update_engine/update-payload-key.pub.pem"
     echo "  -A, --disable-afterwards		Writes SERVER=disabled to /etc/flatcar/update.conf when done (this overwrites any custom SERVER)"
-    echo "  -L, --listen-port-1 <PORT>		Overwrites standard listen port 9090"
-    echo "  -M, --listen-port-2 <PORT>		Overwrites standard listen port 9091"
+    echo "  -L, --listen-port-1 <PORT>		Overwrites standard listen port ${LISTEN_PORT_1}"
+    echo "  -M, --listen-port-2 <PORT>		Overwrites standard listen port ${LISTEN_PORT_2}"
     echo
     echo "Example for updating to the latest Stable release and disabling automatic updates afterwards:"
     echo '  VER=$(curl -fsSL https://stable.release.flatcar-linux.net/amd64-usr/current/version.txt | grep FLATCAR_VERSION= | cut -d = -f 2)'
@@ -63,6 +65,13 @@ while true; do
       echo "Error: --extension expects paths to files named oem-OEMID.gz or flatcar-NAME.gz (with possible 'flatcar_test_update-' prefix), found: $1" > /dev/stderr ; exit 1
     fi
     EXTENSIONS+=("$1")
+    ;;
+  -O|--oem-payloads)
+    shift
+    USE_OEM="$1"
+    if [ "${USE_OEM}" != "yes" ] && [ "${USE_OEM}" != "no" ]; then
+      echo "Error: --oem-payloads must be 'yes' or 'no'" > /dev/stderr ; exit 1
+    fi
     ;;
   -L|--listen-port-1)
     shift
@@ -112,8 +121,11 @@ if [ "${FORCE_DEV_KEY}" = "1" ] && [ "${FORCE_FLATCAR_KEY}" = "1" ]; then
   echo "Error: must only specify one of --force-dev-key or --force-flatcar-key" > /dev/stderr ; exit 1
 fi
 
-# Use the old mount point for compatibility with old instances, where the script gets copied to
-OEMID=$({ grep -m 1 -o "^ID=.*" /usr/share/oem/oem-release 2> /dev/null || true ; } | cut -d = -f 2)
+OEMID=
+if [ "${USE_OEM}" = "yes" ]; then
+  # Use the old mount point for compatibility with old instances, where the script gets copied to
+  OEMID=$({ grep -m 1 -o "^ID=.*" /usr/share/oem/oem-release 2> /dev/null || true ; } | cut -d = -f 2)
+fi
 
 # Determine what to download from release server if no local payload is given.
 # Using /usr/share/flatcar/oems/ from the currently running version means the download is only best-effort
