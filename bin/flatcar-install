@@ -40,7 +40,7 @@ default_board() {
 # Finds an unmounted disk with size greater than 10GB and prints it to stdout,
 # otherwise prints an empty line.
 find_smallest_unused_disk() {
-    local disks="$(lsblk -lnpdb -x SIZE -o NAME,SIZE $INCLUDE_MAJOR $EXCLUDE_MAJOR \
+    local disks="$(lsblk --list --noheadings --paths --nodeps --bytes --sort SIZE --output NAME,SIZE $INCLUDE_MAJOR $EXCLUDE_MAJOR \
         | (
         while IFS= read -r line; do
             drive=$(echo "$line" | awk '{print $1}')
@@ -477,11 +477,13 @@ do
         B) BOARD="$OPTARG" ;;
         C) CHANNEL_ID="$OPTARG"; CHANNEL_SPECIFIED=1 ;;
         D) DOWNLOAD_ONLY='true';;
-        I) INCLUDE_MAJOR="-I $OPTARG" ;;
+        # --include is a param for lsblk
+        I) INCLUDE_MAJOR="--include $OPTARG" ;;
         d) DEVICE="$OPTARG" ;;
         o) OEM_ID="$OPTARG" ;;
         c) CLOUDINIT="$OPTARG" ;;
-        e) EXCLUDE_MAJOR="-e $OPTARG" ;;
+        # --exclude is a param for lsblk
+        e) EXCLUDE_MAJOR="--exclude $OPTARG" ;;
         i) IGNITION="$OPTARG" ;;
         t) ;; # compatibility option; previously set TMPDIR
         b) BASE_URL="${OPTARG%/}" ;;
