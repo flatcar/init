@@ -24,6 +24,8 @@ ConditionKernelCommandLine=|ignition.platform.id=openstack
 ConditionKernelCommandLine=|flatcar.oem.id=openstack
 ConditionKernelCommandLine=|coreos.oem.id=openstack
 
+ConditionKernelCommandLine=|flatcar.oem.id=proxmoxve
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
