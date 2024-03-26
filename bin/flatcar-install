@@ -642,7 +642,7 @@ function prep_url(){
     # if the version is "current", resolve the actual version number
     if [[ "${VERSION_ID}" == "current" ]]; then
         local VERSIONTXT_URL="${BASE_URL}/${VERSION_ID}/version.txt"
-        VERSION_ID=$(wget ${WGET_ARGS} -qO- "${VERSIONTXT_URL}" | sed -n 's/^FLATCAR_VERSION=//p')
+        VERSION_ID=$(source <(wget ${WGET_ARGS} -qO- "${VERSIONTXT_URL}"); echo "${FLATCAR_VERSION}")
         if [[ -z "${VERSION_ID}" ]]; then
             echo "$0: version.txt unavailable: ${VERSIONTXT_URL}" >&2
             exit 1
