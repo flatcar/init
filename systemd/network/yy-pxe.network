@@ -1,5 +1,7 @@
 [Match]
 Name=*
+Type=!loopback bridge tunnel vxlan wireguard
+Driver=!veth dummy
 KernelCommandLine=!root
 
 [Network]
