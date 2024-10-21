@@ -30,6 +30,9 @@ ConditionKernelCommandLine=|flatcar.oem.id=hetzner
 ConditionKernelCommandLine=|ignition.platform.id=akamai
 ConditionKernelCommandLine=|flatcar.oem.id=akamai
 
+ConditionKernelCommandLine=|ignition.platform.id=ionoscloud
+ConditionKernelCommandLine=|flatcar.oem.id=ionoscloud
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
