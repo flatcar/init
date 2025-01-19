@@ -12,6 +12,7 @@ ConditionDirectoryNotEmpty=|/usr/lib/extensions
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/bin/systemctl daemon-reload
+ExecStart=/usr/bin/systemctl reload systemd-networkd.service
 ExecStart=/usr/bin/systemctl restart --no-block sockets.target timers.target multi-user.target
 [Install]
 WantedBy=sysinit.target
