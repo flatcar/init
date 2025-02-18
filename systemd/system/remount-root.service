@@ -11,6 +11,7 @@ Wants=local-fs-pre.target
 ConditionVirtualization=!container
 ConditionPathIsMountPoint=/
 ConditionPathIsReadWrite=!/
+ConditionKernelCommandLine=!rootflags=ro
 
 [Service]
 Type=oneshot
