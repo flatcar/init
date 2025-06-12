@@ -9,3 +9,4 @@ ConditionPathExists=!/usr/.noupdate
 [Mount]
 What=/dev/disk/by-label/EFI-SYSTEM
 Where=/boot
+Options=umask=0077
