@@ -17,7 +17,7 @@ else
     ensure_tool "${BZIP_UTIL}"
 fi
 
-toolset=( blockdev btrfstune cp cut dd gawk gpg grep head ls lsblk mkdir mkfifo mktemp mount rm sed sort tee udevadm wget wipefs ) 
+toolset=( blockdev btrfstune cp cut dd gawk gpg grep head ls lsblk lvm mkdir mkfifo mktemp mount rm sed sort tee udevadm wget wipefs ) 
 
 for t in "${toolset[@]}"; do ensure_tool "${t}"; done
 
@@ -618,6 +618,10 @@ function get_disk_status() {
 
 function write_to_disk() {
     mkfifo -m 0600 "${WORKDIR}/disk_modified"
+
+    # unconditionally try to deactive any possible auto-activated LVM volume groups
+    # as those will block the modified partition table from being re-read.
+    lvm vgchange -an || true
 
     # We are at the point of no return, so wipe disk labels missed below.
     # In particular, ZFS writes labels in the last half-MiB of the disk.
