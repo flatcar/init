@@ -33,6 +33,9 @@ ConditionKernelCommandLine=|flatcar.oem.id=akamai
 ConditionKernelCommandLine=|ignition.platform.id=proxmoxve
 ConditionKernelCommandLine=|flatcar.oem.id=proxmoxve
 
+ConditionKernelCommandLine=|ignition.platform.id=scaleway
+ConditionKernelCommandLine=|flatcar.oem.id=scaleway
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
