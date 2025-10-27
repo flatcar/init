@@ -6,7 +6,8 @@ IPv6AcceptRA=true
 [Match]
 Name=*
 Type=!loopback bridge tunnel vxlan wireguard
-Driver=!veth dummy
+Driver=!veth tun dummy
+Kind=!tun bridge gre veth wireguard
 
 [DHCP]
 UseMTU=true
