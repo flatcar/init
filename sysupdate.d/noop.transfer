@@ -1,0 +1,8 @@
+[Source]
+Type=regular-file
+Path=/
+MatchPattern=invalid@v.raw
+[Target]
+Type=regular-file
+Path=/
+MatchPattern=invalid@v.raw

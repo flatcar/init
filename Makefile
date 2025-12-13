@@ -16,6 +16,7 @@ install:
 		$(DESTDIR)/usr/bin \
 		$(DESTDIR)/usr/sbin \
 		$(DESTDIR)/usr/lib/flatcar \
+		$(DESTDIR)/usr/lib/sysupdate.d \
 		$(DESTDIR)/usr/lib/systemd/system \
 		$(DESTDIR)/usr/lib/systemd/network \
 		$(DESTDIR)/usr/lib/systemd/system-generators \
@@ -33,6 +34,7 @@ install:
 	install -m 644 configs/modules-load.d/* $(DESTDIR)/usr/lib/modules-load.d/
 	install -m 644 configs/tmpfiles.d/* $(DESTDIR)/usr/lib/tmpfiles.d/
 	cp -a systemd/* $(DESTDIR)/usr/lib/systemd/
+	cp -a sysupdate.d/* $(DESTDIR)/usr/lib/sysupdate.d/
 	chmod 755 $(DESTDIR)/usr/lib/systemd/system-generators/*
 	ln -sf ../run/issue $(DESTDIR)/etc/issue
 	ln -sfT flatcar $(DESTDIR)/usr/lib/coreos
