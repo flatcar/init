@@ -16,7 +16,7 @@ DefaultDependencies=no
 Before=sysinit.target
 
 OnFailure=emergency.target
-OnFailureJobMode=isolate
+OnFailureJobMode=replace-irreversibly
 
 [Service]
 Type=oneshot

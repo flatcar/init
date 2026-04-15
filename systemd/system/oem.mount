@@ -13,5 +13,5 @@ ConditionPathExists=!/usr/.noupdate
 What=/dev/disk/by-label/OEM
 Where=/oem
 Options=nodev
-Type=auto
+Type=btrfs,ext4
 LazyUnmount=yes
