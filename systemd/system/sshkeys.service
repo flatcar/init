@@ -36,6 +36,9 @@ ConditionKernelCommandLine=|flatcar.oem.id=proxmoxve
 ConditionKernelCommandLine=|ignition.platform.id=scaleway
 ConditionKernelCommandLine=|flatcar.oem.id=scaleway
 
+ConditionKernelCommandLine=|ignition.platform.id=oraclecloud
+ConditionKernelCommandLine=|flatcar.oem.id=oraclecloud
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
