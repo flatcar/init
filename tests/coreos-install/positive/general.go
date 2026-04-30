@@ -80,11 +80,6 @@ hostname: "coreos1"`),
 		OEM:  util.StringToPtr("digitalocean"),
 	})
 	register.Register(register.Test{
-		Name: "OEM - packet",
-		Func: baseTest,
-		OEM:  util.StringToPtr("packet"),
-	})
-	register.Register(register.Test{
 		Name: "OEM - rackspace",
 		Func: baseTest,
 		OEM:  util.StringToPtr("rackspace"),
