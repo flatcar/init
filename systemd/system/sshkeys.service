@@ -4,10 +4,6 @@ After=update-ssh-keys-after-ignition.service
 
 ConditionPathIsSymbolicLink=!/etc/systemd/system/coreos-metadata-sshkeys@core.service
 
-ConditionKernelCommandLine=|ignition.platform.id=packet
-ConditionKernelCommandLine=|flatcar.oem.id=packet
-ConditionKernelCommandLine=|coreos.oem.id=packet
-
 ConditionKernelCommandLine=|ignition.platform.id=ec2
 ConditionKernelCommandLine=|flatcar.oem.id=ec2
 ConditionKernelCommandLine=|coreos.oem.id=ec2
