@@ -3,12 +3,6 @@
 ACTION=="remove", GOTO="cloud_storage_end"
 SUBSYSTEM!="block", GOTO="cloud_storage_end"
 
-# Google GCE by-id
-KERNEL=="sd*|vd*", ENV{ID_VENDOR}=="Google", ENV{ID_MODEL}=="PersistentDisk", ENV{ID_SERIAL_SHORT}=="?*", ENV{DEVTYPE}=="disk", SYMLINK+="disk/by-id/google-$env{ID_SERIAL_SHORT}"
-KERNEL=="sd*|vd*", ENV{ID_VENDOR}=="Google", ENV{ID_MODEL}=="PersistentDisk", ENV{ID_SERIAL_SHORT}=="?*", ENV{DEVTYPE}=="partition", SYMLINK+="disk/by-id/google-$env{ID_SERIAL_SHORT}-part%n"
-KERNEL=="sd*|vd*", ENV{ID_VENDOR}=="Google", ENV{ID_MODEL}=="EphemeralDisk", ENV{ID_SERIAL_SHORT}=="?*", ENV{DEVTYPE}=="disk", SYMLINK+="disk/by-id/google-$env{ID_SERIAL_SHORT}"
-KERNEL=="sd*|vd*", ENV{ID_VENDOR}=="Google", ENV{ID_MODEL}=="EphemeralDisk", ENV{ID_SERIAL_SHORT}=="?*", ENV{DEVTYPE}=="partition", SYMLINK+="disk/by-id/google-$env{ID_SERIAL_SHORT}-part%n"
-
 ## AWS EBS NVMe names
 ## https://github.com/coreos/bugs/issues/2399
 # NVMe devices
@@ -19,6 +13,7 @@ KERNEL=="nvme[0-9]*n[0-9]*p[0-9]*", ENV{DEVTYPE}=="partition", ATTRS{model}=="Am
 KERNEL=="nvme[0-9]*n[0-9]*p[0-9]*", ENV{DEVTYPE}=="partition", ATTRS{model}=="Amazon Elastic Block Store", ATTRS{serial}=="?*", ENV{_NS_ID}=="?*", SYMLINK+="disk/by-id/nvme-$attr{model}_$attr{serial}-ns-$env{_NS_ID}-part%n", OPTIONS+="string_escape=replace"
 KERNEL=="nvme[0-9]*n[0-9]*p[0-9]*", ENV{DEVTYPE}=="partition", ATTRS{model}=="Amazon Elastic Block Store", ATTRS{serial}=="?*", ENV{_NS_ID}=="?*", PROGRAM="cloud_aws_ebs_nvme_id -d /dev/%k", SYMLINK+="%c%n"
 
+# GCE is handled in the app-admin/google-guest-configs package.
 # TODO: Anyone else support friendly names?
 
 LABEL="cloud_storage_end"
