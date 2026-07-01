@@ -1,7 +1,8 @@
 [Match]
+# Only virtual NICs have a Kind, and we want to exclude those.
+Kind=!?*
+Type=!loopback
 Virtualization=vmware
-Type=!loopback dummy bridge tunnel vxlan wireguard
-Driver=!veth
 
 [Network]
 DHCP=yes

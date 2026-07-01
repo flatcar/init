@@ -1,13 +1,12 @@
+[Match]
+# Only virtual NICs have a Kind, and we want to exclude those.
+Kind=!?*
+Type=!loopback
+
 [Network]
 DHCP=yes
 KeepConfiguration=dynamic-on-stop
 IPv6AcceptRA=true
-
-[Match]
-Name=*
-Type=!loopback bridge tunnel vxlan wireguard
-Driver=!veth tun dummy
-Kind=!tun bridge gre veth wireguard
 
 [DHCP]
 UseMTU=true
