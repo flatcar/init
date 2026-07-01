@@ -1,6 +1,6 @@
 [Network]
 DHCP=yes
-KeepConfiguration=dhcp-on-stop
+KeepConfiguration=dynamic-on-stop
 IPv6AcceptRA=true
 
 [Match]
