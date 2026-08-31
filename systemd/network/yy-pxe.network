@@ -1,15 +1,15 @@
 [Match]
-Name=*
-Type=!loopback bridge tunnel vxlan wireguard
-Driver=!veth dummy
+# Only virtual NICs have a Kind, and we want to exclude those.
+Kind=!?*
+Type=!loopback
 KernelCommandLine=!root
 
 [Network]
 DHCP=yes
-KeepConfiguration=dhcp-on-stop
+KeepConfiguration=dynamic-on-stop
 IPv6AcceptRA=true
 
 [DHCP]
-ClientIdentifier=mac
 UseMTU=true
 UseDomains=true
+ClientIdentifier=mac
