@@ -5,7 +5,7 @@ Description=Run cloudinit
 EnvironmentFile=/var/run/ignition.env
 Type=oneshot
 ExecCondition=bash -xc 'case ${OEM_ID} in aws|azure|cloudsigma|digitalocean|gcp|openstack|vmware) true;; *) false;; esac'
-ExecStart=bash -xc 'exec coreos-cloudinit --oem="$(case ${OEM_ID} in aws|openstack) echo ec2-compat;; gcp) echo gce;; *) printf "%s" "${OEM_ID}";; esac)"'
+ExecStart=bash -xc 'exec coreos-cloudinit --oem="$(case ${OEM_ID} in aws|openstack) echo ec2-compat;; gcp) echo gce;; *) printf "%%s" "${OEM_ID}";; esac)"'
 
 [Install]
 WantedBy=multi-user.target
