@@ -61,8 +61,8 @@ find_smallest_unused_disk() {
 # Everything we do should be user-access only!
 umask 077
 
-if grep -q "^ID=flatcar$" /etc/os-release; then
-    source /etc/os-release
+if (. /etc/os-release; [[ "${ID}" = "flatcar" ]]); then
+    . /etc/os-release
     [[ -f /usr/share/flatcar/update.conf ]] && source /usr/share/flatcar/update.conf
     [[ -f /etc/flatcar/update.conf ]] && source /etc/flatcar/update.conf
 fi
