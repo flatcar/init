@@ -86,29 +86,30 @@ fi
 
 USAGE="Usage: $0 {{-d <device>}|-s} [options]
 Options:
-    -d DEVICE   Install Flatcar Container Linux to the given device.
-    -D          Download a Flatcar Container Linux image to the current directory, without installing it
-    -s          EXPERIMENTAL: Install Flatcar Container Linux to the smallest unmounted disk found
-                (min. size 10GB). It is recommended to use it with -e or -I to filter the
-                block devices by their major numbers. E.g., -e 7 to exclude loop devices
-                or -I 8,259 for certain disk types. Read more about the numbers here:
-                https://www.kernel.org/doc/Documentation/admin-guide/devices.txt.
-    -V VERSION  Version to install (e.g. current, or current-2022 for the LTS 2022 stream) [default: ${VERSION_ID}].
-    -B BOARD    Flatcar Container Linux board to use [default: ${BOARD}].
-    -C CHANNEL  Release channel to use (e.g. beta) [default: ${CHANNEL_ID}].
-    -I|e <M,..> EXPERIMENTAL (used with -s): List of major device numbers to in-/exclude
-                when finding the smallest disk.
-    -o OEM      OEM type to install (e.g. 'ami' or '' to force none), using flatcar_production_<OEM>_image.bin.bz2 [default: ${OEM_ID:-(none, i.e., the empty string)}].
-    -c CLOUD    Insert a cloud-init config to be executed on boot.
-    -i IGNITION Insert an Ignition config to be executed on boot.
-    -b BASEURL  URL to the image mirror (overrides BOARD and CHANNEL).
-    -k KEYFILE  Override default GPG key for verifying image signature.
-    -f IMAGE    Install unverified local image file to disk instead of fetching.
-    -n          Copy generated network units to the root partition.
-    -u          Create UEFI boot entry
-    -y          Dry-run.  Run some checks and print option settings.
-    -v          Super verbose, for debugging.
-    -h          This ;-).
+    -d DEVICE       Install Flatcar Container Linux to the given device.
+    -D              Download a Flatcar Container Linux image to the current directory, without installing it
+    -s              EXPERIMENTAL: Install Flatcar Container Linux to the smallest unmounted disk found
+                    (min. size 10GB). It is recommended to use it with -e or -I to filter the
+                    block devices by their major numbers. E.g., -e 7 to exclude loop devices
+                    or -I 8,259 for certain disk types. Read more about the numbers here:
+                    https://www.kernel.org/doc/Documentation/admin-guide/devices.txt.
+    -V VERSION      Version to install (e.g. current, or current-2022 for the LTS 2022 stream) [default: ${VERSION_ID}].
+    -B BOARD        Flatcar Container Linux board to use [default: ${BOARD}].
+    -C CHANNEL      Release channel to use (e.g. beta) [default: ${CHANNEL_ID}].
+    -I|e <M,..>     EXPERIMENTAL (used with -s): List of major device numbers to in-/exclude
+                    when finding the smallest disk.
+    -o OEM          OEM type to install (e.g. 'ami' or '' to force none), using flatcar_production_<OEM>_image.bin.bz2 [default: ${OEM_ID:-(none, i.e., the empty string)}].
+    -c CLOUD        Insert a cloud-init config to be executed on boot.
+    -i IGNITION     Insert an Ignition config to be executed on boot.
+    -U IGNITIONURL  Download an Ignition config to be executed on boot.
+    -b BASEURL      URL to the image mirror (overrides BOARD and CHANNEL).
+    -k KEYFILE      Override default GPG key for verifying image signature.
+    -f IMAGE        Install unverified local image file to disk instead of fetching.
+    -n              Copy generated network units to the root partition.
+    -u              Create UEFI boot entry
+    -y              Dry-run.  Run some checks and print option settings.
+    -v              Super verbose, for debugging.
+    -h              This ;-).
 
 This tool installs Flatcar Container Linux on a block device. If you PXE booted
 Flatcar Container Linux on a machine then use this tool to make a permanent install.
@@ -501,13 +502,14 @@ WXo7A5nj0plrH9Jn23wzGSTpf0QCApG55iOsKtrnvWTEGihjLFD9ccnMHb9AGQmG
 DEVICE=
 CLOUDINIT=
 IMAGE_FILE=
+IGNITION_URL=
 KEYFILE=
 VERSION_SUMMARY='Flatcar Container Linux'
 CREATE_UEFI=
 
 WGET_ARGS="--tries 10 --timeout=20 --retry-connrefused"
 
-while getopts "V:B:C:DI:d:o:c:e:i:t:b:k:f:nusyvh" OPTION
+while getopts "V:B:C:DI:d:o:c:e:i:U:t:b:k:f:nusyvh" OPTION
 do
     case $OPTION in
         V) VERSION_ID="$OPTARG"; VERSION_SPECIFIED=1 ;;
@@ -520,6 +522,7 @@ do
         c) CLOUDINIT="$OPTARG" ;;
         e) EXCLUDE_MAJOR="-e $OPTARG" ;;
         i) IGNITION="$OPTARG" ;;
+        U) IGNITION_URL="$OPTARG" ;;
         t) ;; # compatibility option; previously set TMPDIR
         b) BASE_URL="${OPTARG%/}" ;;
         k) KEYFILE="$OPTARG" ;;
@@ -543,6 +546,7 @@ Settings:
     OEM:      ${OEM_ID:-(none)}
     CLOUD:    ${CLOUDINIT:-(none)}
     IGNITION: ${IGNITION:-(none)}
+    IGNITION_URL: ${IGNITION_URL:-(none)}
     BASEURL:  ${BASE_URL:-(none)}
     KEYFILE:  ${KEYFILE:-(none)}
     IMAGE:    ${IMAGE_FILE:-(none)}"
@@ -595,6 +599,14 @@ if [[ -z "${DOWNLOAD_ONLY}" ]]; then
     if [[ -n "${IGNITION}" ]]; then
         if [[ ! -f "${IGNITION}" ]]; then
             echo "$0: Ignition config file (${IGNITION}) does not exist." >&2
+            exit 1
+        fi
+    fi
+
+    if [[ -n "${IGNITION_URL}" ]]; then
+        IGNITION=config.ign
+        if ! wget ${WGET_ARGS} --quiet -O ${IGNITION} "${IGNITION_URL}"; then
+            echo "$0: Ignition config url (${IGNITION_URL}) not found." >&2
             exit 1
         fi
     fi
@@ -829,4 +841,4 @@ else
 fi
 
 rm -rf "${WORKDIR}"
-trap - EXIT 
+trap - EXIT
