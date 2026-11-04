@@ -1,0 +1,23 @@
+#!/usr/bin/bash
+
+# Copyright Amazon.com, Inc. and its affiliates. All Rights Reserved.
+#
+# Licensed under the MIT License. See the LICENSE accompanying this file
+# for the specific language governing permissions and limitations under
+# the License.
+
+# Expected input is partition's kernel name like nvme0n1p2 or nvme0n1, output would be 1
+
+if [[ $# -ne 1 ]]; then
+  exit 1
+else
+  kernel_name=$1
+
+  # Remove nvme prefix (also deals with any /dev that might accidentally get passed in)
+  prefix_removed=${kernel_name#*nvme*n}
+  
+  # Remove partition suffix
+  NSID=${prefix_removed%p*}
+
+  echo "_NS_ID=${NSID}"
+fi

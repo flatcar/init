@@ -3,14 +3,17 @@
 ACTION=="remove", GOTO="cloud_storage_end"
 SUBSYSTEM!="block", GOTO="cloud_storage_end"
 
-## AWS EBS NVMe names
+## AWS NVMe names based on amazon-ec2-utils
 ## https://github.com/coreos/bugs/issues/2399
+## https://github.com/flatcar/Flatcar/issues/1845
 # NVMe devices
-KERNEL=="nvme[0-9]*n[0-9]*", ENV{DEVTYPE}=="disk", ATTRS{model}=="Amazon Elastic Block Store", ATTRS{serial}=="?*", SYMLINK+="disk/by-id/nvme-$attr{model}_$attr{serial}-ns-%n", OPTIONS+="string_escape=replace"
+KERNEL=="nvme[0-9]*n[0-9]*", ENV{DEVTYPE}=="disk", ATTRS{model}=="Amazon Elastic Block Store|Amazon EC2 NVMe Instance Storage", SYMLINK+="disk/by-id/nvme-$attr{model}-ns-%n", OPTIONS+="string_escape=replace"
+KERNEL=="nvme[0-9]*n[0-9]*", ENV{DEVTYPE}=="disk", ATTRS{model}=="Amazon Elastic Block Store|Amazon EC2 NVMe Instance Storage", ATTRS{serial}=="?*", SYMLINK+="disk/by-id/nvme-$attr{model}_$attr{serial}-ns-%n", OPTIONS+="string_escape=replace"
 KERNEL=="nvme[0-9]*n[0-9]*", ENV{DEVTYPE}=="disk", ATTRS{model}=="Amazon Elastic Block Store", ATTRS{serial}=="?*", PROGRAM="cloud_aws_ebs_nvme_id -d /dev/%k", SYMLINK+="%c"
 # NVMe partitions
-KERNEL=="nvme[0-9]*n[0-9]*p[0-9]*", ENV{DEVTYPE}=="partition", ATTRS{model}=="Amazon Elastic Block Store", ATTRS{serial}=="?*", IMPORT{program}="cloud_aws_ebs_nvme_id -n /dev/%k"
-KERNEL=="nvme[0-9]*n[0-9]*p[0-9]*", ENV{DEVTYPE}=="partition", ATTRS{model}=="Amazon Elastic Block Store", ATTRS{serial}=="?*", ENV{_NS_ID}=="?*", SYMLINK+="disk/by-id/nvme-$attr{model}_$attr{serial}-ns-$env{_NS_ID}-part%n", OPTIONS+="string_escape=replace"
+KERNEL=="nvme[0-9]*n[0-9]*p[0-9]*", ENV{DEVTYPE}=="partition", ATTRS{model}=="Amazon Elastic Block Store|Amazon EC2 NVMe Instance Storage", ATTRS{serial}=="?*", IMPORT{program}="ec2nvme-nsid %k"
+KERNEL=="nvme[0-9]*n[0-9]*p[0-9]*", ENV{DEVTYPE}=="partition", ATTRS{model}=="Amazon Elastic Block Store|Amazon EC2 NVMe Instance Storage", ENV{_NS_ID}=="?*", SYMLINK+="disk/by-id/nvme-$attr{model}-ns-$env{_NS_ID}-part%n", OPTIONS+="string_escape=replace"
+KERNEL=="nvme[0-9]*n[0-9]*p[0-9]*", ENV{DEVTYPE}=="partition", ATTRS{model}=="Amazon Elastic Block Store|Amazon EC2 NVMe Instance Storage", ATTRS{serial}=="?*", ENV{_NS_ID}=="?*", SYMLINK+="disk/by-id/nvme-$attr{model}_$attr{serial}-ns-$env{_NS_ID}-part%n", OPTIONS+="string_escape=replace"
 KERNEL=="nvme[0-9]*n[0-9]*p[0-9]*", ENV{DEVTYPE}=="partition", ATTRS{model}=="Amazon Elastic Block Store", ATTRS{serial}=="?*", ENV{_NS_ID}=="?*", PROGRAM="cloud_aws_ebs_nvme_id -d /dev/%k", SYMLINK+="%c%n"
 
 # GCE is handled in the app-admin/google-guest-configs package.
