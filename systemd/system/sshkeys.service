@@ -35,6 +35,9 @@ ConditionKernelCommandLine=|flatcar.oem.id=scaleway
 ConditionKernelCommandLine=|ignition.platform.id=oraclecloud
 ConditionKernelCommandLine=|flatcar.oem.id=oraclecloud
 
+ConditionKernelCommandLine=|ignition.platform.id=outscale
+ConditionKernelCommandLine=|flatcar.oem.id=outscale
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
