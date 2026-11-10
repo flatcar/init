@@ -5,14 +5,7 @@
 # found in the LICENSE file.
 
 usage() {
-    echo "Usage: $0 [-d|-n|-h] <device>" 1>&2
-}
-
-# Get partition ID from device name, e.g. '/dev/nvme0n1p2' -> '1'
-namespace_id() {
-    check_udev_aws
-    NSID=$(echo -n "$1" | cut -f 3 -d 'n' | cut -f 1 -d 'p')
-    echo "_NS_ID=${NSID}"
+    echo "Usage: $0 [-n|-h] <device>" 1>&2
 }
 
 # Get device name from raw metadata,
@@ -41,10 +34,6 @@ while getopts "hd:n:" o; do
     case "${o}" in
         d)
             devname "${OPTARG}"
-            exit 0
-            ;;
-        n)
-            namespace_id "${OPTARG}"
             exit 0
             ;;
         h)
