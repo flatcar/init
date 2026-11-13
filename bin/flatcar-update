@@ -177,11 +177,6 @@ if [ "$STATUS" != "" ]; then
   echo "Error: a previously downloaded update wasn't applied yet, you can discard it with 'update_engine_client -reset_status'" > /dev/stderr; exit 1
 fi
 
-touch /etc/flatcar/update.conf
-PREV_SERVER=$(grep '^SERVER=' /etc/flatcar/update.conf || true)
-sed -i "/SERVER=.*/d" /etc/flatcar/update.conf
-
-echo "SERVER=http://localhost:${LISTEN_PORT_1}/update" >> /etc/flatcar/update.conf
 BOARD=$({ grep -m 1 BOARD= /usr/share/coreos/release || true ; } | cut -d = -f 2-)
 if [ "$BOARD" = "" ]; then
   echo "Error: could not find board from /usr/share/coreos/release" > /dev/stderr ; exit 1
@@ -333,6 +328,13 @@ if [ "${FORCE_DEV_KEY}" = "1" ] || [ "${FORCE_FLATCAR_KEY}" = "1" ]; then
   echo "Bind-mounting /usr/share/update_engine/update-payload-key.pub.pem"
   mount --bind /tmp/key /usr/share/update_engine/update-payload-key.pub.pem
 fi
+
+# Only point update-engine to the local server once everything above succeeded,
+# otherwise an early exit would leave the node with a dead update server
+touch /etc/flatcar/update.conf
+PREV_SERVER=$(grep '^SERVER=' /etc/flatcar/update.conf || true)
+sed -i "/SERVER=.*/d" /etc/flatcar/update.conf
+echo "SERVER=http://localhost:${LISTEN_PORT_1}/update" >> /etc/flatcar/update.conf
 
 echo "Forcing update..."
 
